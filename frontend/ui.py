@@ -7,8 +7,13 @@ from streamlit.runtime.scriptrunner import add_script_run_ctx
 # ------------------------------------------------------------------
 # 🔗 CONFIGURATION (LOCAL MODE)
 # ------------------------------------------------------------------
-API_URL = "http://127.0.0.1:8000"  # Pointing to your own machine
+# API_URL = "http://127.0.0.1:8000"  # Pointing to your own machine
 # ------------------------------------------------------------------
+# ------------------------------------------------------------------
+# 🔗 CONFIGURATION (CLOUD MODE)
+# ------------------------------------------------------------------
+API_URL = "https://wandererupak-shruti.hf.space"
+
 
 st.set_page_config(page_title="Project Shruti", page_icon="🎙️")
 
