@@ -30,7 +30,7 @@ if "last_audio" not in st.session_state:
     st.session_state.last_audio = None  # NEW: Remember the audio file
 
 st.title("🎙️ Project Shruti")
-st.write("Running completely offline on your device 💻")
+st.write("An End-to-End Nepali Spech Recognition Tool")
 
 # Helper function to send audio to FastAPI and run the live timer
 def transcribe_audio(audio_file, file_type):
