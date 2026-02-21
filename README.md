@@ -24,13 +24,15 @@ By taking a massive, resource-heavy **Wav2Vec2-BERT** model and mathematically q
 
 ## 🚀 Live Demo & Links
 
-* **Frontend UI (Streamlit):** [https://shruti.streamlit.app/](https://shruti.streamlit.app)
-* **Backend (Fast API hosted on Hugging Face Spaces):** [https://wandererupak-shruti.hf.space](https://wandererupak-shruti.hf.space/docs)
+* **Frontend UI (Streamlit):** [https://shruti.streamlit.app/](https://shruti.streamlit.app/)
+* **Backend (Fast API hosted on Hugging Face Spaces):** [https://wandererupak-shruti.hf.space/docs](https://wandererupak-shruti.hf.space/docs)
 * **Docker Image:** [wandererupak/shruti:v1 on Docker Hub](https://hub.docker.com/r/wandererupak/shruti/tags)
 
 ---
 
 ## 🧠 Architecture & Tech Stack
+
+
 
 * **Machine Learning Model:** Locally quantized Wav2Vec2-BERT trained on OSLR 54 Nepali Speech Dataset using (PyTorch, Torchaudio, Transformers).
 * **Backend:** FastAPI running on Uvicorn, serving endpoints on Port 7860.
@@ -38,6 +40,10 @@ By taking a massive, resource-heavy **Wav2Vec2-BERT** model and mathematically q
 * **Package Management:** `uv` (Lightning-fast Python package manager).
 * **Containerization:** Docker (`Dockerfile` included for multi-stage builds).
 * **Cloud Infrastructure:** Hugging Face Spaces (Backend) & Streamlit Community Cloud (Frontend).
+
+---
+
+🧠 **[Quantized Shruti Model](https://drive.google.com/drive/folders/1IedTP-uHqRpqblbGjzuBf1rEe60D9HQ1?usp=sharing)**: Just in case you wish to run the app locally, you need to have the folder inside the drive link in your project directory.
 
 ---
 
@@ -49,3 +55,6 @@ Run the backend API instantly with one command:
 
 ```bash
 docker run -p 7860:7860 wandererupak/shruti:v1
+---
+
+Built with ❤️ by [Rupak Tiwari](https://www.linkedin.com/in/rupak-tiwari-719ba626a) with the help of ChatGPT and Gemini.
