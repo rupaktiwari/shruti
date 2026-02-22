@@ -108,7 +108,8 @@ else:
     if st.session_state.last_audio:
         st.audio(st.session_state.last_audio)
     
-    st.markdown(f"### 📝 Output:\n**{st.session_state.result_text}**")
+    st.markdown("### 📝 Output:")
+    st.code(st.session_state.result_text, language="text")
     
     with st.expander("🔍 Model Details"):
         st.write(f"Model Used: {st.session_state.model_details}")
