@@ -9,7 +9,7 @@
 
 ## 📖 About the Project
 
-**Project Shruti** is a fully containerized, locally quantized Automatic Speech Recognition (ASR) application designed exclusively for the Nepali language. 
+**Shruti** is a fully containerized, locally quantized Automatic Speech Recognition (ASR) application designed exclusively for the Nepali language. 
 
 Currently, robust speech-to-text solutions for low-resource languages like Nepali are often locked behind expensive, cloud-dependent APIs. Project Shruti was built to solve this by bringing powerful, accurate Nepali transcription entirely **offline** and making it accessible on standard consumer hardware.
 
