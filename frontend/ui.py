@@ -7,15 +7,14 @@ from streamlit.runtime.scriptrunner import add_script_run_ctx
 # ------------------------------------------------------------------
 # 🔗 CONFIGURATION (LOCAL MODE)
 # ------------------------------------------------------------------
-API_URL = "http://127.0.0.1:8000"  # Pointing to your own machine
-# ------------------------------------------------------------------
+API_URL = "http://127.0.0.1:8000"
 # ------------------------------------------------------------------
 # 🔗 CONFIGURATION (CLOUD MODE)
 # ------------------------------------------------------------------
 # API_URL = "https://wandererupak-shruti.hf.space"
 
 
-st.set_page_config(page_title="Shruti-V1", page_icon="🎙️")
+st.set_page_config(page_title="Shruti", page_icon="🎙️")
 
 # --- INITIALIZE SESSION STATE ---
 if "result_text" not in st.session_state:
@@ -27,12 +26,12 @@ if "time_taken" not in st.session_state:
 if "widget_key" not in st.session_state:
     st.session_state.widget_key = 0
 if "last_audio" not in st.session_state:
-    st.session_state.last_audio = None  # NEW: Remember the audio file
+    st.session_state.last_audio = None
 
 st.title("🎙️ Shruti")
-st.write("An End-to-End Nepali Speech Recognition Tool")
+st.write("An End-to-End Nepali Speech Recognition and Conversational System")
 
-# Helper function to send audio to FastAPI and run the live timer
+
 def transcribe_audio(audio_file, file_type):
     timer_placeholder = st.empty()
     stop_event = threading.Event()
@@ -61,12 +60,10 @@ def transcribe_audio(audio_file, file_type):
 
         if response.status_code == 200:
             result = response.json()
-
             st.session_state.result_text = result.get("transcription", "Error: Key not found")
             st.session_state.model_details = result.get("model_used")
             st.session_state.time_taken = total_time
-            st.session_state.last_audio = audio_file  # NEW: Save the audio to memory
-
+            st.session_state.last_audio = audio_file
             st.rerun()
         else:
             st.error(f"Error {response.status_code}: {response.text}")
@@ -78,56 +75,73 @@ def transcribe_audio(audio_file, file_type):
 
 
 # ==========================================
-# 🖥️ USER INTERFACE RENDERING
+# 🖥️ TOP-LEVEL SECTIONS
 # ==========================================
+v1_tab, v2_tab = st.tabs(["📝 Shruti V1 — Transcription", "🗣️ Shruti V2 — Conversational Agent"])
 
-# SCENARIO A: No transcription yet -> Show the Upload/Record Tabs
-if st.session_state.result_text is None:
-    tab1, tab2 = st.tabs(["🎤 Record Audio", "📂 Upload File"])
+# ------------------------------------------------------------------
+# SHRUTI V1
+# ------------------------------------------------------------------
+with v1_tab:
+    st.caption(
+        "Batch transcription. Record or upload a clip, get a transcript back."
+    )
 
-    with tab1:
-        audio_bytes = st.audio_input("Click to record", key=f"mic_{st.session_state.widget_key}")
-        if audio_bytes:
-            st.audio(audio_bytes)
-            if st.button("Transcribe Recording", type="primary"):
-                transcribe_audio(audio_bytes, "wav")
+    if st.session_state.result_text is None:
+        tab1, tab2 = st.tabs(["🎤 Record Audio", "📂 Upload File"])
 
-    with tab2:
-        uploaded_file = st.file_uploader("Upload an audio file", type=["wav", "mp3", "webm"], key=f"upload_{st.session_state.widget_key}")
-        if uploaded_file:
-            st.audio(uploaded_file)
-            if st.button("Transcribe File", type="primary"):
-                ext = uploaded_file.name.split(".")[-1]
-                transcribe_audio(uploaded_file, ext)
+        with tab1:
+            audio_bytes = st.audio_input("Click to record", key=f"mic_{st.session_state.widget_key}")
+            if audio_bytes:
+                st.audio(audio_bytes)
+                if st.button("Transcribe Recording", type="primary"):
+                    transcribe_audio(audio_bytes, "wav")
 
-# SCENARIO B: Transcription is done -> Show Results & Clear Button
-else:
-    # NEW: VAD may return an empty string when no speech was detected
-    if st.session_state.result_text == "":
-        st.warning("🔇 No speech detected in the recording. Please try again.")
+        with tab2:
+            uploaded_file = st.file_uploader(
+                "Upload an audio file", type=["wav", "mp3", "webm"], key=f"upload_{st.session_state.widget_key}"
+            )
+            if uploaded_file:
+                st.audio(uploaded_file)
+                if st.button("Transcribe File", type="primary"):
+                    ext = uploaded_file.name.split(".")[-1]
+                    transcribe_audio(uploaded_file, ext)
 
-        if st.session_state.last_audio:
-            st.audio(st.session_state.last_audio)
     else:
-        st.success(f"✅ Transcription Complete! (Took {st.session_state.time_taken} seconds)")
+        if st.session_state.result_text == "":
+            st.warning("🔇 No speech detected in the recording. Please try again.")
+            if st.session_state.last_audio:
+                st.audio(st.session_state.last_audio)
+        else:
+            st.success(f"✅ Transcription Complete! (Took {st.session_state.time_taken} seconds)")
+            if st.session_state.last_audio:
+                st.audio(st.session_state.last_audio)
 
-        # Display the saved audio player right above the text
-        if st.session_state.last_audio:
-            st.audio(st.session_state.last_audio)
+            st.markdown("### 📝 Output:")
+            st.code(st.session_state.result_text, language="text")
 
-        st.markdown("### 📝 Output:")
-        st.code(st.session_state.result_text, language="text")
+            with st.expander("🔍 Model Details"):
+                st.write(f"Model Used: {st.session_state.model_details}")
 
-        with st.expander("🔍 Model Details"):
-            st.write(f"Model Used: {st.session_state.model_details}")
+        st.markdown("---")
+        if st.button("🔄 Clear & Transcribe Another", type="primary"):
+            st.session_state.result_text = None
+            st.session_state.model_details = None
+            st.session_state.time_taken = None
+            st.session_state.last_audio = None
+            st.session_state.widget_key += 1
+            st.rerun()
 
-    st.markdown("---")
-
-    # THE CLEAR BUTTON
-    if st.button("🔄 Clear & Transcribe Another", type="primary"):
-        st.session_state.result_text = None
-        st.session_state.model_details = None
-        st.session_state.time_taken = None
-        st.session_state.last_audio = None  # Clear the audio from memory
-        st.session_state.widget_key += 1
-        st.rerun()
+# ------------------------------------------------------------------
+# SHRUTI V2
+# ------------------------------------------------------------------
+with v2_tab:
+    st.caption(
+        "Live conversation. Speak naturally with pauses — streaming VAD detects "
+        "when you've finished a turn, a LangGraph agent decides how to respond "
+        "(answer, general knowledge, or escalate to a human), and TTS speaks back."
+    )
+    st.info(
+        "🚧 Under construction — this tab will use `streamlit-webrtc` for live mic "
+        "capture over a WebSocket connection to the backend. Not wired up yet."
+    )
