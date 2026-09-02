@@ -1,6 +1,7 @@
 import torch
 import logging
 import os
+import librosa
 from transformers import AutoProcessor
 from app.services.vad_service import VADService
 
@@ -16,12 +17,11 @@ class ShrutiModel:
         self.vad = VADService()
 
     def load_model(self):
+        # ... unchanged ...
         logger.info("💻 Loading Local Quantized Model...")
         full_model_path = os.path.join(self.model_dir, self.model_file)
-
         if not os.path.exists(full_model_path):
             raise RuntimeError(f"❌ Model file '{full_model_path}' not found!")
-
         try:
             self.processor = AutoProcessor.from_pretrained(self.model_dir)
             self.model = torch.load(full_model_path, weights_only=False)
@@ -31,22 +31,24 @@ class ShrutiModel:
             logger.error(f"Failed to load model: {e}")
             raise e
 
-    def predict(self, file_path: str) -> str:
+    def predict(self, file_path: str, skip_vad: bool = False) -> str:
         if not self.model or not self.processor:
             raise RuntimeError("Model is not loaded.")
 
-        trimmed_audio = self.vad.trim_silence(file_path)
-        if trimmed_audio is None:
-            logger.info("🔇 No speech detected — skipping ASR inference.")
-            return ""
+        if skip_vad:
+            # Streaming already found this utterance's boundaries via
+            # VADIterator — re-running trim_silence() here would apply a
+            # second, differently-padded trim, risking the same
+            # start-of-speech clipping we debugged for batch mode.
+            audio_input, _ = librosa.load(file_path, sr=16000)
+        else:
+            trimmed_audio = self.vad.trim_silence(file_path)
+            if trimmed_audio is None:
+                logger.info("🔇 No speech detected — skipping ASR inference.")
+                return ""
+            audio_input = trimmed_audio.numpy()
 
-        audio_input = trimmed_audio.numpy()
-
-        inputs = self.processor(
-            audio_input,
-            return_tensors="pt",
-            sampling_rate=16000
-        )
+        inputs = self.processor(audio_input, return_tensors="pt", sampling_rate=16000)
 
         if "input_features" in inputs:
             model_inputs = inputs.input_features
@@ -58,7 +60,6 @@ class ShrutiModel:
 
         predicted_ids = torch.argmax(logits, dim=-1)
         transcription = self.processor.batch_decode(predicted_ids)[0]
-
         return transcription
 
 shruti_engine = ShrutiModel()
