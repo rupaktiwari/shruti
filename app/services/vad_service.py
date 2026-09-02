@@ -33,7 +33,7 @@ class VADService:
             self.model,
             threshold=0.5,
             sampling_rate=self.sampling_rate,
-            min_silence_duration_ms=500,  # pause this long → speech ended
+            min_silence_duration_ms=1500,  # pause this long → speech ended
         )
 
     def process_pcm_chunk(self, iterator: VADIterator, raw_pcm_bytes: bytes):

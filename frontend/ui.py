@@ -138,6 +138,12 @@ with v1_tab:
 # ------------------------------------------------------------------
 # SHRUTI V2
 # ------------------------------------------------------------------
+import json
+import numpy as np
+import librosa
+import websocket  # from websocket-client
+from streamlit_webrtc import webrtc_streamer, WebRtcMode
+
 with v2_tab:
     st.caption(
         "Live conversation. Speak naturally with pauses — streaming VAD detects "
@@ -152,12 +158,61 @@ with v2_tab:
         media_stream_constraints={"audio": True, "video": False},
     )
 
-    if webrtc_ctx.state.playing:
-        st.write("🎙️ Mic connected — listening...")
+    status_placeholder = st.empty()
+    transcript_placeholder = st.empty()
+    debug_placeholder = st.empty()  # TEMPORARY — remove once frame format is confirmed
 
-        if webrtc_ctx.audio_receiver:
-            try:
-                audio_frames = webrtc_ctx.audio_receiver.get_frames(timeout=1)
-                st.write(f"Received {len(audio_frames)} audio frame(s) this cycle")
-            except Exception:
-                pass
+    if webrtc_ctx.state.playing:
+        status_placeholder.info("🎙️ Listening... speak naturally, pause when you're done.")
+
+        ws_url = "ws://127.0.0.1:8000/ws/transcribe"
+        ws_conn = websocket.create_connection(ws_url)
+        debug_shown = False
+
+        try:
+            while webrtc_ctx.state.playing:
+                if webrtc_ctx.audio_receiver:
+                    try:
+                        audio_frames = webrtc_ctx.audio_receiver.get_frames(timeout=1)
+                    except Exception:
+                        audio_frames = []
+
+                    for frame in audio_frames:
+                        audio_array = frame.to_ndarray()
+
+                        if not debug_shown:
+                            # TEMPORARY — confirms our assumptions about frame
+                            # format before we trust the conversion below
+                            debug_placeholder.write(
+                                f"Frame debug — shape: {audio_array.shape}, "
+                                f"dtype: {audio_array.dtype}, "
+                                f"native rate: {frame.sample_rate}"
+                            )
+                            debug_shown = True
+
+                        # WebRTC delivers int16-scaled samples — normalize to
+                        # [-1, 1] before resampling
+                        audio_mono = audio_array.astype(np.float32).flatten() / 32768.0
+
+                        # Resample from the mic's native rate (commonly 48kHz)
+                        # down to the 16kHz our VAD/ASR pipeline expects
+                        resampled = librosa.resample(
+                            audio_mono, orig_sr=frame.sample_rate, target_sr=16000
+                        )
+                        pcm_bytes = (resampled * 32768.0).astype(np.int16).tobytes()
+
+                        ws_conn.send_binary(pcm_bytes)
+
+                    # Non-blocking check for a transcript, so we don't stall
+                    # the loop waiting on a response that may not have arrived yet
+                    ws_conn.settimeout(0.05)
+                    try:
+                        response = ws_conn.recv()
+                        result = json.loads(response)
+                        transcript_placeholder.success(f"📝 {result['text']}")
+                    except Exception:
+                        pass
+        finally:
+            ws_conn.close()
+    else:
+        status_placeholder.empty()
