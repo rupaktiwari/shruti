@@ -13,6 +13,7 @@ dependencies = [
     "silero-vad>=6.2.1",
     "soundfile>=0.13.1",
     "streamlit>=1.53.0",
+    "streamlit-webrtc>=0.77.0",
     "torch>=2.9.1",
     "torchaudio>=2.11.0",
     "transformers>=4.57.6",
@@ -29,3 +30,8 @@ torchaudio = { index = "pytorch-cpu" }
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
+
+[dependency-groups]
+dev = [
+    "websockets>=16.0",
+]

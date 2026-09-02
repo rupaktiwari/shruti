@@ -3,6 +3,7 @@ import requests
 import time
 import threading
 from streamlit.runtime.scriptrunner import add_script_run_ctx
+from streamlit_webrtc import webrtc_streamer, WebRtcMode
 
 # ------------------------------------------------------------------
 # 🔗 CONFIGURATION (LOCAL MODE)
@@ -84,7 +85,9 @@ v1_tab, v2_tab = st.tabs(["📝 Shruti V1 — Transcription", "🗣️ Shruti V2
 # ------------------------------------------------------------------
 with v1_tab:
     st.caption(
-        "Batch transcription. Record or upload a clip, get a transcript back."
+        "Batch transcription. Record or upload a clip, get a clean transcript back — "
+        "no conversation, no orchestration. Good for dictation, voice notes, and "
+        "quick transcripts."
     )
 
     if st.session_state.result_text is None:
@@ -138,10 +141,23 @@ with v1_tab:
 with v2_tab:
     st.caption(
         "Live conversation. Speak naturally with pauses — streaming VAD detects "
-        "when you've finished a turn, a LangGraph agent decides how to respond "
-        "(answer, general knowledge, or escalate to a human), and TTS speaks back."
+        "when you've finished a turn, a LangGraph agent decides how to respond, "
+        "and TTS speaks back."
     )
-    st.info(
-        "🚧 Under construction — this tab will use `streamlit-webrtc` for live mic "
-        "capture over a WebSocket connection to the backend. Not wired up yet."
+
+    webrtc_ctx = webrtc_streamer(
+        key="shruti-v2-mic",
+        mode=WebRtcMode.SENDONLY,
+        audio_receiver_size=256,
+        media_stream_constraints={"audio": True, "video": False},
     )
+
+    if webrtc_ctx.state.playing:
+        st.write("🎙️ Mic connected — listening...")
+
+        if webrtc_ctx.audio_receiver:
+            try:
+                audio_frames = webrtc_ctx.audio_receiver.get_frames(timeout=1)
+                st.write(f"Received {len(audio_frames)} audio frame(s) this cycle")
+            except Exception:
+                pass
