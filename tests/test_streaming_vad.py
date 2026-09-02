@@ -6,7 +6,7 @@ import numpy as np
 import websockets
 
 WS_URL = "ws://127.0.0.1:8000/ws/transcribe"
-TEST_FILE = "test_audio.wav"
+TEST_FILE = "tests/test_audio.wav"
 CHUNK_SAMPLES = 512
 
 
