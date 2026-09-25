@@ -2,6 +2,11 @@ import streamlit as st
 import requests
 import time
 import threading
+import uuid
+import json
+import numpy as np
+import librosa
+import websocket  # from websocket-client
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit_webrtc import webrtc_streamer, WebRtcMode
 
@@ -17,6 +22,26 @@ API_URL = "http://127.0.0.1:8000"
 
 st.set_page_config(page_title="Shruti", page_icon="🎙️")
 
+# Style "Send to Shruti" (type="secondary") buttons in blue —
+# type="primary" buttons (Transcribe Recording/File) are untouched.
+st.markdown(
+    """
+    <style>
+    div[data-testid="stButton"] button[kind="secondary"] {
+        background-color: #2563EB;
+        color: white;
+        border: 1px solid #2563EB;
+    }
+    div[data-testid="stButton"] button[kind="secondary"]:hover {
+        background-color: #1D4ED8;
+        color: white;
+        border: 1px solid #1D4ED8;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # --- INITIALIZE SESSION STATE ---
 if "result_text" not in st.session_state:
     st.session_state.result_text = None
@@ -28,12 +53,19 @@ if "widget_key" not in st.session_state:
     st.session_state.widget_key = 0
 if "last_audio" not in st.session_state:
     st.session_state.last_audio = None
+if "conversation_answer" not in st.session_state:
+    st.session_state.conversation_answer = None
+if "conversation_route" not in st.session_state:
+    st.session_state.conversation_route = None
+if "v1_thread_id" not in st.session_state:
+    st.session_state.v1_thread_id = f"v1-{uuid.uuid4().hex}"
 
 st.title("🎙️ Shruti")
 st.write("An End-to-End Nepali Speech Recognition and Conversational System")
 
 
 def transcribe_audio(audio_file, file_type):
+    """Transcribe only — no orchestration, no LLM call."""
     timer_placeholder = st.empty()
     stop_event = threading.Event()
 
@@ -65,6 +97,8 @@ def transcribe_audio(audio_file, file_type):
             st.session_state.model_details = result.get("model_used")
             st.session_state.time_taken = total_time
             st.session_state.last_audio = audio_file
+            st.session_state.conversation_answer = None
+            st.session_state.conversation_route = None
             st.rerun()
         else:
             st.error(f"Error {response.status_code}: {response.text}")
@@ -75,19 +109,76 @@ def transcribe_audio(audio_file, file_type):
         st.error(f"❌ Could not connect to {API_URL}. Is 'uv run fastapi dev app/main.py' running?")
 
 
+def send_audio_to_shruti(audio_file, file_type):
+    """Transcribe AND send to the LangGraph orchestrator for a response."""
+    progress_placeholder = st.empty()
+    progress_placeholder.info("🎧 Shruti is hearing...")
+
+    start_time_exact = time.time()
+    try:
+        audio_bytes = audio_file.getvalue() if hasattr(audio_file, "getvalue") else audio_file
+        files = {"file": (f"audio.{file_type}", audio_bytes, f"audio/{file_type}")}
+
+        transcription_response = requests.post(f"{API_URL}/transcribe", files=files, timeout=300)
+
+        if transcription_response.status_code != 200:
+            progress_placeholder.error(f"Transcription failed: {transcription_response.text}")
+            return
+
+        transcription_result = transcription_response.json()
+        transcript = transcription_result.get("transcription", "").strip()
+
+        st.session_state.result_text = transcript
+        st.session_state.model_details = transcription_result.get("model_used")
+        st.session_state.last_audio = audio_bytes
+
+        if not transcript:
+            st.session_state.time_taken = round(time.time() - start_time_exact, 2)
+            st.session_state.conversation_answer = None
+            st.session_state.conversation_route = None
+            st.rerun()
+            return
+
+        progress_placeholder.info("🤔 Shruti is responding...")
+
+        conversation_response = requests.post(
+            f"{API_URL}/converse",
+            json={"transcript": transcript, "thread_id": st.session_state.v1_thread_id},
+            timeout=300,
+        )
+
+        if conversation_response.status_code != 200:
+            progress_placeholder.error(f"Conversation failed: {conversation_response.text}")
+            return
+
+        conversation_result = conversation_response.json()
+        st.session_state.conversation_answer = conversation_result.get("answer", "")
+        st.session_state.conversation_route = conversation_result.get("route", "")
+        st.session_state.time_taken = round(time.time() - start_time_exact, 2)
+
+        st.rerun()
+
+    except requests.exceptions.ConnectionError:
+        progress_placeholder.error(f"Could not connect to {API_URL}. Is FastAPI running?")
+    except requests.exceptions.RequestException as error:
+        progress_placeholder.error(f"Request failed: {error}")
+
+
 # ==========================================
 # 🖥️ TOP-LEVEL SECTIONS
 # ==========================================
-v1_tab, v2_tab = st.tabs(["📝 Shruti V1 — Transcription", "🗣️ Shruti V2 — Conversational Agent"])
+v1_tab, v2_tab = st.tabs(["📝 Shruti V1 — Conversational Agent", "🗣️ Shruti V2 — Streaming (Experimental)"])
 
 # ------------------------------------------------------------------
 # SHRUTI V1
 # ------------------------------------------------------------------
 with v1_tab:
     st.caption(
-        "Batch transcription. Record or upload a clip, get a clean transcript back — "
-        "no conversation, no orchestration. Good for dictation, voice notes, and "
-        "quick transcripts."
+        "End-to-end voice assistant. Record or upload audio, then choose: "
+        "'Transcribe Only' for a plain transcript, or 'Send to Shruti' to also "
+        "get a response back. Currently, Shruti can answer both in-domain queries (E-sewa KYC for prototype) using "
+        "RAG and out-of-domain queries using only an LLM. It can also escalate — generate a response that triggers "
+        "human in the loop. Currently the medium to involve humans is not set so it plainly responds in text."
     )
 
     if st.session_state.result_text is None:
@@ -97,8 +188,13 @@ with v1_tab:
             audio_bytes = st.audio_input("Click to record", key=f"mic_{st.session_state.widget_key}")
             if audio_bytes:
                 st.audio(audio_bytes)
-                if st.button("Transcribe Recording", type="primary"):
-                    transcribe_audio(audio_bytes, "wav")
+                col1, _, col2 = st.columns([1, 3, 1])
+                with col1:
+                    if st.button("Transcribe Recording", type="primary", key="v1_transcribe_recording"):
+                        transcribe_audio(audio_bytes, "wav")
+                with col2:
+                    if st.button("Send to Shruti", type="secondary", key="v1_send_recording"):
+                        send_audio_to_shruti(audio_bytes, "wav")
 
         with tab2:
             uploaded_file = st.file_uploader(
@@ -106,9 +202,14 @@ with v1_tab:
             )
             if uploaded_file:
                 st.audio(uploaded_file)
-                if st.button("Transcribe File", type="primary"):
-                    ext = uploaded_file.name.split(".")[-1]
-                    transcribe_audio(uploaded_file, ext)
+                ext = uploaded_file.name.split(".")[-1].lower()
+                col1, _, col2 = st.columns([1, 3, 1])
+                with col1:
+                    if st.button("Transcribe File", type="primary", key="v1_transcribe_file"):
+                        transcribe_audio(uploaded_file, ext)
+                with col2:
+                    if st.button("Send to Shruti", type="secondary", key="v1_send_file"):
+                        send_audio_to_shruti(uploaded_file, ext)
 
     else:
         if st.session_state.result_text == "":
@@ -126,29 +227,31 @@ with v1_tab:
             with st.expander("🔍 Model Details"):
                 st.write(f"Model Used: {st.session_state.model_details}")
 
+            if st.session_state.conversation_answer:
+                st.markdown("### 🤖 Shruti's Response")
+                st.write(st.session_state.conversation_answer)
+                st.caption(f"LangGraph route: `{st.session_state.conversation_route}`")
+
         st.markdown("---")
-        if st.button("🔄 Clear & Transcribe Another", type="primary"):
+        if st.button("🔄 Clear", type="primary"):
             st.session_state.result_text = None
             st.session_state.model_details = None
             st.session_state.time_taken = None
             st.session_state.last_audio = None
+            st.session_state.conversation_answer = None
+            st.session_state.conversation_route = None
+            st.session_state.v1_thread_id = f"v1-{uuid.uuid4().hex}"
             st.session_state.widget_key += 1
             st.rerun()
 
 # ------------------------------------------------------------------
-# SHRUTI V2
+# SHRUTI V2 (EXPERIMENTAL — TRANSCRIPTION ONLY)
 # ------------------------------------------------------------------
-import json
-import numpy as np
-import librosa
-import websocket  # from websocket-client
-from streamlit_webrtc import webrtc_streamer, WebRtcMode
-
 with v2_tab:
     st.caption(
-        "Live conversation. Speak naturally with pauses — streaming VAD detects "
-        "when you've finished a turn, a LangGraph agent decides how to respond, "
-        "and TTS speaks back."
+        "Experimental streaming ASR. Speak naturally and pause to receive "
+        "a live transcript. This version currently performs transcription only; "
+        "it does not yet send the transcript to LangGraph or provide TTS."
     )
 
     webrtc_ctx = webrtc_streamer(
@@ -160,10 +263,10 @@ with v2_tab:
 
     status_placeholder = st.empty()
     transcript_placeholder = st.empty()
-    debug_placeholder = st.empty()  # TEMPORARY — remove once frame format is confirmed
+    debug_placeholder = st.empty()
 
     if webrtc_ctx.state.playing:
-        status_placeholder.info("🎙️ Listening... speak naturally, pause when you're done.")
+        status_placeholder.info("🎙️ Listening... speak naturally, pause when you're done. Click Stop when finished.")
 
         ws_url = "ws://127.0.0.1:8000/ws/transcribe"
         ws_conn = websocket.create_connection(ws_url)
@@ -181,8 +284,6 @@ with v2_tab:
                         audio_array = frame.to_ndarray()
 
                         if not debug_shown:
-                            # TEMPORARY — confirms our assumptions about frame
-                            # format before we trust the conversion below
                             debug_placeholder.write(
                                 f"Frame debug — shape: {audio_array.shape}, "
                                 f"dtype: {audio_array.dtype}, "
@@ -190,21 +291,12 @@ with v2_tab:
                             )
                             debug_shown = True
 
-                        # WebRTC delivers int16-scaled samples — normalize to
-                        # [-1, 1] before resampling
                         audio_mono = audio_array.astype(np.float32).flatten() / 32768.0
-
-                        # Resample from the mic's native rate (commonly 48kHz)
-                        # down to the 16kHz our VAD/ASR pipeline expects
-                        resampled = librosa.resample(
-                            audio_mono, orig_sr=frame.sample_rate, target_sr=16000
-                        )
+                        resampled = librosa.resample(audio_mono, orig_sr=frame.sample_rate, target_sr=16000)
                         pcm_bytes = (resampled * 32768.0).astype(np.int16).tobytes()
 
                         ws_conn.send_binary(pcm_bytes)
 
-                    # Non-blocking check for a transcript, so we don't stall
-                    # the loop waiting on a response that may not have arrived yet
                     ws_conn.settimeout(0.05)
                     try:
                         response = ws_conn.recv()

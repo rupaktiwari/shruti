@@ -1,3 +1,4 @@
+chroma_db/
 # Python-generated files
 __pycache__/
 *.py[oc]
@@ -11,4 +12,11 @@ wheels/
 .env
 
 # model
+quantized_shruti_model/*.db
+
+# Local generated databases
+chroma_db/
+shruti_conversations.db*
+ 
+# Local model files
 quantized_shruti_model/
