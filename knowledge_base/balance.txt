@@ -1,0 +1,7 @@
+Q: How do I check my account balance?
+A: Open the app and your balance is shown on the home screen. You can also
+dial *123# for a balance check via SMS.
+
+Q: My balance looks wrong after a transaction.
+A: Balances update within 5 minutes of a completed transaction. If it's been
+longer, check your transaction history under Activity.

@@ -1,0 +1,8 @@
+Q: Why is my KYC not verified yet?
+A: KYC verification typically takes 24-48 hours. Common reasons for delay
+include a blurry ID photo, a name mismatch between your ID and account,
+or an expired citizenship card. Re-upload a clear photo under Settings > KYC
+if it has been more than 48 hours.
+
+Q: What documents are needed for KYC?
+A: A valid citizenship card or passport, and a clear selfie for face matching.
