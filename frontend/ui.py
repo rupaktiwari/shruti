@@ -13,8 +13,7 @@ from streamlit_webrtc import webrtc_streamer, WebRtcMode
 # ------------------------------------------------------------------
 # 🔗 CONFIGURATION (LOCAL MODE)
 # ------------------------------------------------------------------
-API_URL = "http://127.0.0.1:8000"
-# ------------------------------------------------------------------
+API_URL = "https://wandererupak-shruti.hf.space"# ------------------------------------------------------------------
 # 🔗 CONFIGURATION (CLOUD MODE)
 # ------------------------------------------------------------------
 # API_URL = "https://wandererupak-shruti.hf.space"
