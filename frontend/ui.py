@@ -12,8 +12,8 @@ from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit_webrtc import WebRtcMode, webrtc_streamer
 
 
-# API_URL = "https://wandererupak-shruti.hf.space"
-API_URL = "http://127.0.0.1:8000"
+API_URL = "https://wandererupak-shruti.hf.space"
+# API_URL = "http://127.0.0.1:8000"
 
 st.set_page_config(page_title="Shruti", page_icon="🎙️")
 
