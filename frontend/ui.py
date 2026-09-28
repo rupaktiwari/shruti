@@ -60,7 +60,7 @@ if "v1_thread_id" not in st.session_state:
     st.session_state.v1_thread_id = f"v1-{uuid.uuid4().hex}"
 
 st.title("🎙️ Shruti")
-st.write("An End-to-End Nepali Speech Recognition and Conversational System")
+st.write("An End-to-End Nepali Speech Recognition and Voice-Based RAG System")
 
 
 def transcribe_audio(audio_file, file_type):
