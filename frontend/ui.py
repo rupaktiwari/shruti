@@ -1,19 +1,10 @@
-import json
-import threading
-import time
+# API_URL = "https://wandererupak-shruti.hf.space"
 import uuid
 
-import librosa
-import numpy as np
 import requests
 import streamlit as st
-import websocket
-from streamlit.runtime.scriptrunner import add_script_run_ctx
-from streamlit_webrtc import WebRtcMode, webrtc_streamer
 
-
-API_URL = "https://wandererupak-shruti.hf.space"
-# API_URL = "http://127.0.0.1:8000"
+API_URL = "http://127.0.0.1:8000"
 
 st.set_page_config(page_title="Shruti", page_icon="🎙️")
 
@@ -35,432 +26,167 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-
 defaults = {
-    "result_text": None,
-    "model_details": None,
-    "time_taken": None,
+    "messages": [],
+    "thread_id": f"v1-{uuid.uuid4().hex}",
+    "pending_transcript": None,
+    "pending_audio": None,
     "widget_key": 0,
-    "last_audio": None,
-    "conversation_answer": None,
-    "conversation_route": None,
-    "response_audio": None,
-    "v1_thread_id": f"v1-{uuid.uuid4().hex}",
 }
-
 for key, value in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
 
-st.title("🎙️ Shruti")
-st.write("An End-to-End Nepali Speech Recognition and Conversational System")
+def transcribe_only(audio_bytes, file_type):
+    files = {"file": (f"audio.{file_type}", audio_bytes, f"audio/{file_type}")}
+    response = requests.post(f"{API_URL}/transcribe", files=files, timeout=300)
+    if response.status_code != 200:
+        st.error(f"Transcription failed: {response.text}")
+        return None
+    return response.json().get("transcription", "").strip()
+
+
+def send_to_shruti(transcript):
+    response = requests.post(
+        f"{API_URL}/converse",
+        json={"transcript": transcript, "thread_id": st.session_state.thread_id},
+        timeout=300,
+    )
+    if response.status_code != 200:
+        st.error(f"Conversation failed: {response.text}")
+        return None, None
+    result = response.json()
+    return result.get("answer", ""), result.get("route", "")
 
 
 def synthesize_speech(text):
-    """Request TTS audio only when the user presses the speaker button."""
     text = text.strip()
     if not text:
         return None
-
-    try:
-        response = requests.post(
-            f"{API_URL}/tts",
-            json={"text": text},
-            timeout=300,
-        )
-    except requests.exceptions.RequestException as error:
-        st.error(f"TTS request failed: {error}")
+    response = requests.post(f"{API_URL}/tts", json={"text": text}, timeout=300)
+    if response.status_code != 200 or not response.content:
+        st.error(f"TTS failed: {response.text}")
         return None
-
-    if response.status_code != 200:
-        st.error(f"TTS failed ({response.status_code}): {response.text}")
-        return None
-
-    if not response.content:
-        st.error("TTS returned an empty audio response.")
-        return None
-
     return response.content
 
 
-def transcribe_audio(audio_file, file_type):
-    """Transcribe only; do not call the conversation or TTS endpoints."""
-    timer_placeholder = st.empty()
-    stop_event = threading.Event()
+# ------------------------------------------------------------------
+# SIDEBAR
+# ------------------------------------------------------------------
+with st.sidebar:
+    st.title("🎙️ Shruti")
 
-    def run_timer():
-        start_time = time.time()
-        while not stop_event.is_set():
-            elapsed = int(time.time() - start_time)
-            timer_placeholder.info(
-                f"⏳ **Processing Audio...** {elapsed} seconds elapsed"
-            )
-            time.sleep(0.5)
-
-    timer_thread = threading.Thread(target=run_timer)
-    add_script_run_ctx(timer_thread)
-    timer_thread.start()
-
-    start_time_exact = time.time()
-
-    try:
-        files = {
-            "file": (
-                f"audio.{file_type}",
-                audio_file,
-                f"audio/{file_type}",
-            )
-        }
-        response = requests.post(
-            f"{API_URL}/transcribe",
-            files=files,
-            timeout=300,
-        )
-
-        stop_event.set()
-        timer_thread.join()
-        timer_placeholder.empty()
-
-        total_time = round(time.time() - start_time_exact, 2)
-
-        if response.status_code == 200:
-            result = response.json()
-            st.session_state.result_text = result.get(
-                "transcription",
-                "Error: Key not found",
-            )
-            st.session_state.model_details = result.get("model_used")
-            st.session_state.time_taken = total_time
-            st.session_state.last_audio = (
-                audio_file.getvalue()
-                if hasattr(audio_file, "getvalue")
-                else audio_file
-            )
-            st.session_state.conversation_answer = None
-            st.session_state.conversation_route = None
-            st.session_state.response_audio = None
-            st.rerun()
-        else:
-            st.error(f"Error {response.status_code}: {response.text}")
-
-    except requests.exceptions.RequestException as error:
-        stop_event.set()
-        timer_thread.join()
-        timer_placeholder.empty()
-        st.error(f"Transcription request failed: {error}")
-
-
-def send_audio_to_shruti(audio_file, file_type):
-    """Transcribe audio and request a conversational response."""
-    progress_placeholder = st.empty()
-    progress_placeholder.info("🎧 Shruti is hearing...")
-
-    start_time_exact = time.time()
-    audio_bytes = (
-        audio_file.getvalue()
-        if hasattr(audio_file, "getvalue")
-        else audio_file
-    )
-
-    st.session_state.conversation_answer = None
-    st.session_state.conversation_route = None
-    st.session_state.response_audio = None
-
-    try:
-        files = {
-            "file": (
-                f"audio.{file_type}",
-                audio_bytes,
-                f"audio/{file_type}",
-            )
-        }
-        transcription_response = requests.post(
-            f"{API_URL}/transcribe",
-            files=files,
-            timeout=300,
-        )
-
-        if transcription_response.status_code != 200:
-            progress_placeholder.error(
-                f"Transcription failed: {transcription_response.text}"
-            )
-            return
-
-        transcription_result = transcription_response.json()
-        transcript = transcription_result.get("transcription", "").strip()
-
-        st.session_state.result_text = transcript
-        st.session_state.model_details = transcription_result.get("model_used")
-        st.session_state.last_audio = audio_bytes
-
-        if not transcript:
-            st.session_state.time_taken = round(
-                time.time() - start_time_exact,
-                2,
-            )
-            progress_placeholder.warning("🔇 No speech detected.")
-            st.rerun()
-            return
-
-        progress_placeholder.info("🤔 Shruti is responding...")
-
-        conversation_response = requests.post(
-            f"{API_URL}/converse",
-            json={
-                "transcript": transcript,
-                "thread_id": st.session_state.v1_thread_id,
-            },
-            timeout=300,
-        )
-
-        if conversation_response.status_code != 200:
-            progress_placeholder.error(
-                f"Conversation failed: {conversation_response.text}"
-            )
-            return
-
-        conversation_result = conversation_response.json()
-        st.session_state.conversation_answer = conversation_result.get(
-            "answer",
-            "",
-        ).strip()
-        st.session_state.conversation_route = conversation_result.get(
-            "route",
-            "",
-        )
-        st.session_state.time_taken = round(
-            time.time() - start_time_exact,
-            2,
-        )
-
-        progress_placeholder.success("✅ Shruti has responded.")
+    if st.button("➕ New Conversation", type="primary", use_container_width=True):
+        st.session_state.messages = []
+        st.session_state.thread_id = f"v1-{uuid.uuid4().hex}"
+        st.session_state.pending_transcript = None
+        st.session_state.pending_audio = None
+        st.session_state.widget_key += 1
         st.rerun()
 
-    except requests.exceptions.RequestException as error:
-        progress_placeholder.error(f"Request failed: {error}")
+    st.markdown("---")
+    st.caption("Past conversations")
+
+    try:
+        threads = requests.get(f"{API_URL}/conversations", timeout=10).json()
+    except requests.exceptions.RequestException:
+        threads = []
+
+    if not threads:
+        st.caption("_No conversations yet_")
+
+    for thread in threads:
+        is_active = thread["thread_id"] == st.session_state.thread_id
+        label = ("👉 " if is_active else "💬 ") + (thread["title"] or "(empty)")
+        if st.button(label, key=f"thread_{thread['thread_id']}", use_container_width=True):
+            st.session_state.thread_id = thread["thread_id"]
+            history = requests.get(f"{API_URL}/conversations/{thread['thread_id']}", timeout=10).json()
+            # Note: past audio recordings aren't stored, only text —
+            # reloaded messages show text/route but no playback of the
+            # original user recording.
+            st.session_state.messages = [
+                {"role": m["role"], "content": m["content"], "route": m.get("route"), "audio": None}
+                for m in history
+            ]
+            st.session_state.pending_transcript = None
+            st.session_state.pending_audio = None
+            st.rerun()
+
+    st.markdown("---")
+
+    st.markdown("---")
+    st.caption("V2 is an experimental streaming ASR --- ongoing project. It's behaviour is erratic as of now.")
 
 
-v1_tab, v2_tab = st.tabs(
-    [
-        "📝 Shruti V1 — Transcription & Conversational System",
-        "🗣️ Shruti V2 — Streaming (Experimental)",
-    ]
-)
+# ------------------------------------------------------------------
+# CHAT HISTORY
+# ------------------------------------------------------------------
+st.write("An End-to-End Nepali Speech Recognition and Conversational Agent")
+
+for i, message in enumerate(st.session_state.messages):
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
+
+        if message["role"] == "user" and message.get("audio"):
+            st.audio(message["audio"])
+
+        if message["role"] == "assistant":
+            st.caption(f"Route: `{message.get('route', '')}`")
+            if message.get("audio"):
+                st.audio(message["audio"], format="audio/wav")
+            elif st.button("🔊 Speak this response", key=f"speak_{i}"):
+                with st.spinner("Generating speech..."):
+                    audio = synthesize_speech(message["content"])
+                if audio:
+                    st.session_state.messages[i]["audio"] = audio
+                    st.rerun()
 
 
-with v1_tab:
-    st.caption(
-        "End-to-end voice assistant. Record or upload audio, then choose: "
-        "'Transcribe Only' for a plain transcript, or 'Send to Shruti' to also "
-        "get a response back. Currently, Shruti can answer both in-domain "
-        "queries (E-sewa KYC for prototype) using RAG and out-of-domain "
-        "queries using only an LLM. It can also escalate — generate a response "
-        "that triggers human in the loop. Currently the medium to involve "
-        "humans is not set so it plainly responds in text."
-    )
+# ------------------------------------------------------------------
+# INPUT AREA
+# ------------------------------------------------------------------
+st.markdown("---")
 
-    if st.session_state.result_text is None:
-        record_tab, upload_tab = st.tabs(
-            ["🎤 Record Audio", "📂 Upload File"]
-        )
+recorded_audio = st.audio_input("🎤 Record your message", key=f"mic_{st.session_state.widget_key}")
 
-        with record_tab:
-            recorded_audio = st.audio_input(
-                "Click to record",
-                key=f"mic_{st.session_state.widget_key}",
-            )
+if recorded_audio and st.session_state.pending_transcript is None:
+    with st.spinner("Transcribing..."):
+        audio_bytes = recorded_audio.getvalue()
+        transcript = transcribe_only(audio_bytes, "wav")
+    if transcript:
+        st.session_state.pending_transcript = transcript
+        st.session_state.pending_audio = audio_bytes
+        st.rerun()
+    elif transcript == "":
+        st.warning("🔇 No speech detected. Try again.")
 
-            if recorded_audio:
-                st.audio(recorded_audio)
-                transcribe_col, spacer_col, send_col = st.columns([1, 3, 1])
+if st.session_state.pending_transcript:
+    st.markdown("**Transcript preview** (hover for copy icon):")
+    st.code(st.session_state.pending_transcript, language="text")
 
-                with transcribe_col:
-                    if st.button(
-                        "Transcribe Recording",
-                        type="primary",
-                        key="v1_transcribe_recording",
-                    ):
-                        transcribe_audio(recorded_audio, "wav")
+    col_send, col_discard = st.columns([1, 1])
+    with col_send:
+        if st.button("➤ Send", type="secondary", use_container_width=True):
+            transcript = st.session_state.pending_transcript
+            audio = st.session_state.pending_audio
 
-                with send_col:
-                    if st.button(
-                        "Send to Shruti",
-                        type="secondary",
-                        key="v1_send_recording",
-                    ):
-                        send_audio_to_shruti(recorded_audio, "wav")
+            st.session_state.messages.append({"role": "user", "content": transcript, "audio": audio})
 
-        with upload_tab:
-            uploaded_file = st.file_uploader(
-                "Upload an audio file",
-                type=["wav", "mp3", "webm"],
-                key=f"upload_{st.session_state.widget_key}",
-            )
+            with st.spinner("Shruti is responding..."):
+                answer, route = send_to_shruti(transcript)
 
-            if uploaded_file:
-                st.audio(uploaded_file)
-                file_type = uploaded_file.name.rsplit(".", 1)[-1].lower()
-                transcribe_col, spacer_col, send_col = st.columns([1, 3, 1])
+            if answer is not None:
+                st.session_state.messages.append({"role": "assistant", "content": answer, "route": route, "audio": None})
 
-                with transcribe_col:
-                    if st.button(
-                        "Transcribe File",
-                        type="primary",
-                        key="v1_transcribe_file",
-                    ):
-                        transcribe_audio(uploaded_file, file_type)
-
-                with send_col:
-                    if st.button(
-                        "Send to Shruti",
-                        type="secondary",
-                        key="v1_send_file",
-                    ):
-                        send_audio_to_shruti(uploaded_file, file_type)
-
-    else:
-        if st.session_state.result_text == "":
-            st.warning("🔇 No speech detected in the recording. Please try again.")
-            if st.session_state.last_audio:
-                st.audio(st.session_state.last_audio)
-        else:
-            st.success(
-                f"✅ Transcription Complete! "
-                f"(Took {st.session_state.time_taken} seconds)"
-            )
-
-            if st.session_state.last_audio:
-                st.audio(st.session_state.last_audio)
-
-            st.markdown("### 📝 Output:")
-            st.code(st.session_state.result_text, language="text")
-
-            with st.expander("🔍 Model Details"):
-                st.write(f"Model Used: {st.session_state.model_details}")
-
-            if st.session_state.conversation_answer:
-                title_col, speaker_col = st.columns(
-                    [0.88, 0.12],
-                    vertical_alignment="center",
-                )
-
-                with title_col:
-                    st.markdown("### 🤖 Shruti's Response")
-
-                with speaker_col:
-                    if st.button(
-                        "🔊",
-                        key="v1_speak_response",
-                        help="Generate and play Shruti's response",
-                    ):
-                        with st.spinner("Generating speech..."):
-                            st.session_state.response_audio = synthesize_speech(
-                                st.session_state.conversation_answer
-                            )
-
-                st.write(st.session_state.conversation_answer)
-
-                if st.session_state.response_audio:
-                    st.audio(
-                        st.session_state.response_audio,
-                        format="audio/wav",
-                    )
-
-                st.caption(
-                    f"LangGraph route: "
-                    f"`{st.session_state.conversation_route}`"
-                )
-
-        st.markdown("---")
-        if st.button("🔄 Clear", type="primary"):
-            st.session_state.result_text = None
-            st.session_state.model_details = None
-            st.session_state.time_taken = None
-            st.session_state.last_audio = None
-            st.session_state.conversation_answer = None
-            st.session_state.conversation_route = None
-            st.session_state.response_audio = None
-            st.session_state.v1_thread_id = f"v1-{uuid.uuid4().hex}"
+            st.session_state.pending_transcript = None
+            st.session_state.pending_audio = None
             st.session_state.widget_key += 1
             st.rerun()
 
-
-with v2_tab:
-    st.caption(
-        "Experimental streaming ASR. Speak naturally and pause to receive "
-        "a live transcript. This version currently performs transcription only; "
-        "it does not yet send the transcript to LangGraph or provide TTS."
-    )
-
-    webrtc_ctx = webrtc_streamer(
-        key="shruti-v2-mic",
-        mode=WebRtcMode.SENDONLY,
-        audio_receiver_size=256,
-        media_stream_constraints={"audio": True, "video": False},
-    )
-
-    status_placeholder = st.empty()
-    transcript_placeholder = st.empty()
-    debug_placeholder = st.empty()
-
-    if webrtc_ctx.state.playing:
-        status_placeholder.info(
-            "🎙️ Listening... speak naturally, pause when you're done. "
-            "Click Stop when finished."
-        )
-
-        ws_url = "ws://127.0.0.1:8000/ws/transcribe"
-        ws_conn = websocket.create_connection(ws_url)
-        debug_shown = False
-
-        try:
-            while webrtc_ctx.state.playing:
-                if webrtc_ctx.audio_receiver:
-                    try:
-                        audio_frames = webrtc_ctx.audio_receiver.get_frames(
-                            timeout=1
-                        )
-                    except Exception:
-                        audio_frames = []
-
-                    for frame in audio_frames:
-                        audio_array = frame.to_ndarray()
-
-                        if not debug_shown:
-                            debug_placeholder.write(
-                                f"Frame debug — shape: {audio_array.shape}, "
-                                f"dtype: {audio_array.dtype}, "
-                                f"native rate: {frame.sample_rate}"
-                            )
-                            debug_shown = True
-
-                        audio_mono = (
-                            audio_array.astype(np.float32).flatten()
-                            / 32768.0
-                        )
-                        resampled = librosa.resample(
-                            audio_mono,
-                            orig_sr=frame.sample_rate,
-                            target_sr=16000,
-                        )
-                        pcm_bytes = (
-                            (resampled * 32768.0)
-                            .astype(np.int16)
-                            .tobytes()
-                        )
-                        ws_conn.send_binary(pcm_bytes)
-
-                    ws_conn.settimeout(0.05)
-                    try:
-                        response = ws_conn.recv()
-                        result = json.loads(response)
-                        transcript_placeholder.success(
-                            f"📝 {result['text']}"
-                        )
-                    except Exception:
-                        pass
-        finally:
-            ws_conn.close()
-    else:
-        status_placeholder.empty()
+    with col_discard:
+        if st.button("🗑️ Discard", type="primary", use_container_width=True):
+            st.session_state.pending_transcript = None
+            st.session_state.pending_audio = None
+            st.session_state.widget_key += 1
+            st.rerun()
