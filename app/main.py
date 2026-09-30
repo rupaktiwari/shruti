@@ -5,7 +5,7 @@ from app.api.routes import router
 from app.api.ws_routes import ws_router
 from app.services.ml_model import shruti_engine
 from app.api.converse_routes import converse_router
-
+from app.api.tts_routes import tts_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -23,6 +23,7 @@ app = FastAPI(
 app.include_router(router)
 app.include_router(ws_router)
 app.include_router(converse_router)
+app.include_router(tts_router)
 
 @app.get("/")
 def health_check():
