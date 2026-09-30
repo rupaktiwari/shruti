@@ -20,3 +20,6 @@ shruti_conversations.db*
  
 # Local model files
 quantized_shruti_model/
+
+# TTS test artifacts
+test_tts.wav
