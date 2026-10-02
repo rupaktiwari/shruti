@@ -11,9 +11,9 @@
 
 **Shruti** is a fully containerized, locally quantized Automatic Speech Recognition (ASR) and Conversational System designed exclusively for the Nepali language. 
 
-Currently, robust speech-to-text solutions for low-resource languages like Nepali are often locked behind expensive, cloud-dependent APIs. Project Shruti was built to solve this by bringing powerful, accurate Nepali transcription entirely **offline** and making it accessible on standard consumer hardware.
+Currently, robust speech-to-text solutions for low-resource languages like Nepali are often locked behind expensive, cloud-dependent APIs. Project Shruti was built to solve this by bringing powerful, accurate Nepali transcription entirely offline and making it accessible on standard consumer hardware.
 
-By taking a massive, resource-heavy **Wav2Vec2-BERT** model and mathematically quantizing its weights (reducing it to an ~834 MB `.pt` file), this application drastically reduces the memory footprint required for inference. The result is a highly accurate AI brain that runs blazingly fast on **CPU-only environments**, wrapped in a robust FastAPI backend and paired with a seamless Streamlit user interface.
+By taking a massive, resource-heavy Wav2Vec2-BERT model and mathematically quantizing its weights (reducing it to an ~834 MB `.pt` file), this application drastically reduces the memory footprint required for inference. The result is a highly accurate AI brain that runs blazingly fast on CPU-only environments, wrapped in a robust FastAPI backend and paired with a seamless Streamlit user interface.
 
 **Key Highlights of Work Done**
 * Fine-tuned Wav2Vec2-BERT on OSLR 54 Nepali speech data, tracking convergence with Weights & Biases over 136 GPU hours.
