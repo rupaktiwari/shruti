@@ -70,6 +70,3 @@ docker run -p 7860:7860 wandererupak/shruti:v1
 ```
 
 ---
-
-Built with ❤️ by [Rupak Tiwari](https://www.linkedin.com/in/rupak-tiwari-719ba626a) with the help of ChatGPT and Gemini.
-
