@@ -38,7 +38,7 @@ By taking a massive, resource-heavy **Wav2Vec2-BERT** model and mathematically q
 
 * **Frontend UI (Streamlit):** [https://shruti.streamlit.app/](https://shruti.streamlit.app/)
 * **Backend (Fast API hosted on Hugging Face Spaces):** [https://wandererupak-shruti.hf.space/docs](https://wandererupak-shruti.hf.space/docs)
-* **Docker Image:** [wandererupak/shruti:v1 on Docker Hub](https://hub.docker.com/r/wandererupak/shruti/tags)
+* **Docker Image:** [wandererupak/shruti:latest on Docker Hub](https://hub.docker.com/r/wandererupak/shruti/tags)
 
 ---
 
