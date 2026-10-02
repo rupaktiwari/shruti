@@ -1,4 +1,4 @@
-# 🎙️ Project Shruti: End-to-End Nepali Speech Recognition
+# 🎙️ Project Shruti: End-to-End Nepali Speech Recognition and Conversational AI Assistant
 
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
@@ -9,16 +9,28 @@
 
 ## 📖 About the Project
 
-**Shruti** is a fully containerized, locally quantized Automatic Speech Recognition (ASR) application designed exclusively for the Nepali language. 
+**Shruti** is a fully containerized, locally quantized Automatic Speech Recognition (ASR) and Conversational System designed exclusively for the Nepali language. 
 
 Currently, robust speech-to-text solutions for low-resource languages like Nepali are often locked behind expensive, cloud-dependent APIs. Project Shruti was built to solve this by bringing powerful, accurate Nepali transcription entirely **offline** and making it accessible on standard consumer hardware.
 
 By taking a massive, resource-heavy **Wav2Vec2-BERT** model and mathematically quantizing its weights (reducing it to an ~834 MB `.pt` file), this application drastically reduces the memory footprint required for inference. The result is a highly accurate AI brain that runs blazingly fast on **CPU-only environments**, wrapped in a robust FastAPI backend and paired with a seamless Streamlit user interface.
 
-**Key Highlights:**
-* **100% Free Inference:** No API keys, no paywalls, and no reliance on third-party cloud servers like OpenAI or Google Cloud.
-* **Hardware Optimized:** Quantized to run efficiently on standard CPUs without requiring expensive NVIDIA GPUs.
-* **Continuous Deployment (CD):** Decoupled architecture where the frontend UI updates in real-time upon GitHub pushes, while the heavy backend remains stably hosted on Hugging Face Spaces.
+**Key Highlights of Work Done**
+* Fine-tuned Wav2Vec2-BERT on OSLR 54 Nepali speech data, tracking convergence with Weights & Biases over 136 GPU hours.
+
+* Engineered a decoupled, quantized (FP32$\rightarrow$INT8) inference pipeline with VAD for silence/noise filtering and reliable transcription.
+
+* Designed intent routing across RAG, general responses, and human escalation, with ChromaDB RAG using sentence-transformer embeddings and a custom knowledge base.
+
+* Implemented SQLite-backed persistent conversation state and structured escalation-ticket generation.
+
+* Exposed ASR and conversational workflows via FastAPI with a Streamlit frontend.
+
+* Added on-demand TTS using a Transformers-based VITS synthesis service.
+
+* Containerized and deployed the backend using Docker, uv, Docker Hub, and Hugging Face Spaces.
+
+* Prototyped real-time streaming ASR using WebSockets, VADIterator, and streamlit-webrtc, identifying quality challenges relative to batched ASR.
 
 ---
 
