@@ -18,7 +18,7 @@ By taking a massive, resource-heavy **Wav2Vec2-BERT** model and mathematically q
 **Key Highlights of Work Done**
 * Fine-tuned Wav2Vec2-BERT on OSLR 54 Nepali speech data, tracking convergence with Weights & Biases over 136 GPU hours.
 
-* Engineered a decoupled, quantized (FP32$\rightarrow$INT8) inference pipeline with VAD for silence/noise filtering and reliable transcription.
+* Engineered a decoupled, quantized (FP32 -> INT8) inference pipeline with VAD for silence/noise filtering and reliable transcription.
 
 * Designed intent routing across RAG, general responses, and human escalation, with ChromaDB RAG using sentence-transformer embeddings and a custom knowledge base.
 
