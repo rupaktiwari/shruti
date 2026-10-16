@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from app.services.orchestrator_service import orchestrator
 from app.services.conversation_log_service import conversation_log
@@ -28,3 +28,10 @@ async def list_conversations():
 @converse_router.get("/conversations/{thread_id}")
 async def get_conversation(thread_id: str):
     return conversation_log.get_thread_messages(thread_id)
+
+@converse_router.delete("/conversations/{thread_id}")
+async def delete_conversation(thread_id: str):
+    deleted = conversation_log.delete_thread(thread_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Conversation '{thread_id}' not found")
+    return {"status": "deleted", "thread_id": thread_id}

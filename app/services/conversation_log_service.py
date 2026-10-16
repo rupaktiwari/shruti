@@ -7,9 +7,6 @@ logger = get_logger(__name__)
 
 class ConversationLogService:
     def __init__(self, db_path: str = "shruti_conversations.db"):
-        # Same file as the LangGraph checkpointer, different table —
-        # SQLite handles multiple tables in one file fine, and this
-        # keeps you down to one file to manage/gitignore.
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self.conn.execute("""
             CREATE TABLE IF NOT EXISTS conversation_messages (
@@ -46,5 +43,13 @@ class ConversationLogService:
             (thread_id,),
         )
         return [{"role": r[0], "content": r[1], "route": r[2]} for r in cursor.fetchall()]
+
+    def delete_thread(self, thread_id: str) -> bool:
+        cursor = self.conn.execute(
+            "DELETE FROM conversation_messages WHERE thread_id = ?",
+            (thread_id,),
+        )
+        self.conn.commit()
+        return cursor.rowcount > 0
 
 conversation_log = ConversationLogService()
