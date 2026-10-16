@@ -3,8 +3,8 @@ import uuid
 import requests
 import streamlit as st
 
-API_URL = "http://127.0.0.1:8000"
-# API_URL = "https://wandererupak-shruti.hf.space"
+# API_URL = "http://127.0.0.1:8000"
+API_URL = "https://wandererupak-shruti.hf.space"
 
 st.set_page_config(page_title="Shruti", page_icon="🎙️", layout="wide")
 
