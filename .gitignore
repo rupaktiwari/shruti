@@ -17,9 +17,12 @@ quantized_shruti_model/*.db
 # Local generated databases
 chroma_db/
 shruti_conversations.db*
- 
+
 # Local model files
 quantized_shruti_model/
 
 # TTS test artifacts
 test_tts.wav
+
+# Test audio fixtures
+tests/*.wav

@@ -10,12 +10,23 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Push to Hugging Face Space
+      - name: Push a clean snapshot to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          git remote add hf https://wandererupak:${HF_TOKEN}@huggingface.co/spaces/wandererupak/shruti
-          git push hf main --force
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Drop test fixtures / local artifacts that don't belong in the
+          # deployed Space and would otherwise get flagged as binary files
+          rm -rf tests shruti_conversations.db shruti_conversations.db-shm shruti_conversations.db-wal
+
+          # Build one fresh commit with no prior history, instead of
+          # pushing the whole GitHub history (which could carry old
+          # binary files HF's server rejects)
+          git checkout --orphan hf-deploy
+          git add -A
+          git commit -m "Deploy ${{ github.sha }}"
+
+          git push --force https://wandererupak:${HF_TOKEN}@huggingface.co/spaces/wandererupak/shruti hf-deploy:main
