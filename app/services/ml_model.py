@@ -2,6 +2,7 @@ import torch
 import logging
 import os
 import librosa
+from huggingface_hub import snapshot_download
 from transformers import AutoProcessor
 from app.services.vad_service import VADService
 
@@ -10,20 +11,26 @@ logger = logging.getLogger("uvicorn")
 class ShrutiModel:
     def __init__(self):
         self.model_id = "Local Quantized Wav2Vec2-BERT"
-        self.model_dir = "quantized_shruti_model"
+        self.hf_repo_id = "wandererupak/shruti-quantized"
         self.model_file = "quantized_model.pt"
         self.processor = None
         self.model = None
         self.vad = VADService()
 
     def load_model(self):
-        # ... unchanged ...
-        logger.info("💻 Loading Local Quantized Model...")
-        full_model_path = os.path.join(self.model_dir, self.model_file)
-        if not os.path.exists(full_model_path):
-            raise RuntimeError(f"❌ Model file '{full_model_path}' not found!")
+        logger.info("💻 Downloading Quantized Model from Hugging Face Hub...")
         try:
-            self.processor = AutoProcessor.from_pretrained(self.model_dir)
+            model_dir = snapshot_download(repo_id=self.hf_repo_id)
+        except Exception as e:
+            logger.error(f"Failed to download model from Hugging Face Hub: {e}")
+            raise e
+
+        full_model_path = os.path.join(model_dir, self.model_file)
+        if not os.path.exists(full_model_path):
+            raise RuntimeError(f"❌ Model file '{full_model_path}' not found after download!")
+
+        try:
+            self.processor = AutoProcessor.from_pretrained(model_dir)
             self.model = torch.load(full_model_path, weights_only=False)
             self.model.eval()
             logger.info("✅ Quantized Model Loaded Successfully!")
@@ -36,10 +43,6 @@ class ShrutiModel:
             raise RuntimeError("Model is not loaded.")
 
         if skip_vad:
-            # Streaming already found this utterance's boundaries via
-            # VADIterator — re-running trim_silence() here would apply a
-            # second, differently-padded trim, risking the same
-            # start-of-speech clipping we debugged for batch mode.
             audio_input, _ = librosa.load(file_path, sr=16000)
         else:
             trimmed_audio = self.vad.trim_silence(file_path)

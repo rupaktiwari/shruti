@@ -21,9 +21,6 @@ COPY app/ app/
 COPY knowledge_base/ knowledge_base/
 COPY scripts/ingest_knowledge_base.py scripts/ingest_knowledge_base.py
 
-# The model must be present in the Docker build context.
-COPY quantized_shruti_model/ quantized_shruti_model/
-
 # Build Chroma inside the image from the knowledge-base files.
 RUN python scripts/ingest_knowledge_base.py
 
