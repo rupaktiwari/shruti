@@ -2,7 +2,6 @@ import torch
 import logging
 import os
 import librosa
-from huggingface_hub import snapshot_download
 from transformers import AutoProcessor
 from app.services.vad_service import VADService
 
@@ -11,26 +10,18 @@ logger = logging.getLogger("uvicorn")
 class ShrutiModel:
     def __init__(self):
         self.model_id = "Local Quantized Wav2Vec2-BERT"
-        self.hf_repo_id = "wandererupak/shruti-quantized"
+        self.model_dir = "/app/quantized_shruti_model"
         self.model_file = "quantized_model.pt"
         self.processor = None
         self.model = None
         self.vad = VADService()
 
     def load_model(self):
-        logger.info("💻 Downloading Quantized Model from Hugging Face Hub...")
-        try:
-            model_dir = snapshot_download(repo_id=self.hf_repo_id)
-        except Exception as e:
-            logger.error(f"Failed to download model from Hugging Face Hub: {e}")
-            raise e
-
-        full_model_path = os.path.join(model_dir, self.model_file)
+        full_model_path = os.path.join(self.model_dir, self.model_file)
         if not os.path.exists(full_model_path):
-            raise RuntimeError(f"❌ Model file '{full_model_path}' not found after download!")
-
+            raise RuntimeError(f"❌ Model file '{full_model_path}' not found!")
         try:
-            self.processor = AutoProcessor.from_pretrained(model_dir)
+            self.processor = AutoProcessor.from_pretrained(self.model_dir)
             self.model = torch.load(full_model_path, weights_only=False)
             self.model.eval()
             logger.info("✅ Quantized Model Loaded Successfully!")
