@@ -1,6 +1,6 @@
 # Shruti
 
-Shruti is a hotel concierge. A guest types in English or Nepali, or speaks Nepali. The reply is text. The property it knows is whatever you put in `knowledge_base/`. The notes in this repo are a sample, so the demo has rooms, rates, and a booking flow to show.
+Shruti is an AI hotel concierge, basically a chatbot. A guest types in English or Nepali, or speaks Nepali. The reply is text. The property it knows is whatever you put in `knowledge_base/`. The notes in this repo are a sample, so the demo has rooms, rates, and a booking flow to show.
 
 The screen is Streamlit. The API is FastAPI. Nepali audio is transcribed by a self-trained Wav2Vec2-BERT model that has been quantized to int8. There is no text-to-speech.
 
