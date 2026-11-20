@@ -1,6 +1,8 @@
 import torch
 import logging
 import os
+from pathlib import Path
+
 import librosa
 from transformers import AutoProcessor
 from app.services.vad_service import VADService
@@ -10,7 +12,11 @@ logger = logging.getLogger("uvicorn")
 class ShrutiModel:
     def __init__(self):
         self.model_id = "Local Quantized Wav2Vec2-BERT"
-        self.model_dir = "/app/quantized_shruti_model"
+        project_root = Path(__file__).resolve().parents[2]
+        self.model_dir = os.getenv(
+            "SHRUTI_MODEL_DIR",
+            str(project_root / "quantized_shruti_model"),
+        )
         self.model_file = "quantized_model.pt"
         self.processor = None
         self.model = None

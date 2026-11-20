@@ -1,27 +1,31 @@
-# app/services/escalation_service.py
 from datetime import date
-from app.services.llm_service import llm
-from app.core.settings import settings
+
 from app.core.logging_config import get_logger
+from app.core.settings import settings
+from app.services.language import prefers_nepali
+from app.services.llm_service import llm
 
 logger = get_logger(__name__)
 
-def escalate(transcript: str, thread_id: str) -> str:
-    extraction_prompt = f'''Extract a structured support ticket from this user query.
-Respond in exactly this format, nothing else:
 
-Issue: <one-line summary of the problem>
+def escalate(transcript: str, session_id: str) -> str:
+    ticket_prompt = f"""Extract a short front-desk ticket.
+Respond in exactly this format:
+
+Issue: <one line>
 Date: {date.today().isoformat()}
-Contact: {settings.gmail_address}
+Contact: {settings.front_desk_email}
 
-User query: {transcript}'''
+Guest message: {transcript}"""
+    ticket = llm.invoke(ticket_prompt).content
+    logger.info("[ESCALATION TICKET] session=%s\n%s", session_id, ticket)
 
-    ticket = llm.invoke(extraction_prompt).content
-
-    # Prototype mode — swap this for real smtplib sending later
-    logger.info("[ESCALATION TICKET] thread=%s\n%s", thread_id, ticket)
-
+    if prefers_nepali(transcript):
+        return (
+            "यो कुरा म आफैं समाधान गर्न सक्दिनँ। "
+            "तपाईंको सन्देश हिमालया हाउसको फ्रन्ट डेस्कमा पठाइएको छ।"
+        )
     return (
-    "म यस प्रश्नको विश्वसनीय उत्तर फेला पार्न सकिनँ। "
-    "तपाईंको प्रश्न मानव प्रतिनिधिकहाँ पठाइएको छ।"
-) 
+        "I can't resolve that myself. "
+        "I've passed your message to the Himalaya House front desk."
+    )

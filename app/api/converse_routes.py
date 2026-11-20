@@ -1,37 +1,71 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+
+from app.db.models import Reservation
+from app.db.postgres import SessionLocal
+from app.schemas.chat import ChatRequest, ChatResponse
+from app.services import memory_service
 from app.services.orchestrator_service import orchestrator
-from app.services.conversation_log_service import conversation_log
 
 converse_router = APIRouter()
+
 
 class ConverseRequest(BaseModel):
     transcript: str
     thread_id: str
     mode: str = "smart"
 
+
 class ConverseResponse(BaseModel):
     answer: str
     route: str
 
+
 @converse_router.post("/converse", response_model=ConverseResponse)
 async def converse(request: ConverseRequest):
-    conversation_log.log_message(request.thread_id, "user", request.transcript)
-    result = orchestrator.respond(request.transcript, request.thread_id, request.mode)
-    conversation_log.log_message(request.thread_id, "assistant", result["answer"], result["route"])
-    return ConverseResponse(**result)
+    return orchestrator.respond(request.transcript, request.thread_id, request.mode)
+
+
+@converse_router.post("/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest):
+    result = orchestrator.respond(request.message, request.session_id)
+    return ChatResponse(reply=result["answer"], route=result["route"])
+
 
 @converse_router.get("/conversations")
 async def list_conversations():
-    return conversation_log.list_threads()
+    return memory_service.list_threads()
+
 
 @converse_router.get("/conversations/{thread_id}")
 async def get_conversation(thread_id: str):
-    return conversation_log.get_thread_messages(thread_id)
+    return memory_service.get_thread_messages(thread_id)
+
 
 @converse_router.delete("/conversations/{thread_id}")
 async def delete_conversation(thread_id: str):
-    deleted = conversation_log.delete_thread(thread_id)
+    deleted = memory_service.delete_thread(thread_id)
     if not deleted:
         raise HTTPException(status_code=404, detail=f"Conversation '{thread_id}' not found")
     return {"status": "deleted", "thread_id": thread_id}
+
+
+@converse_router.get("/reservations")
+async def list_reservations():
+    db = SessionLocal()
+    try:
+        rows = db.query(Reservation).order_by(Reservation.id.desc()).all()
+        return [
+            {
+                "id": row.id,
+                "name": row.name,
+                "email": row.email,
+                "check_in": row.check_in,
+                "check_out": row.check_out,
+                "guests": row.guests,
+                "room_type": row.room_type,
+            }
+            for row in rows
+        ]
+    finally:
+        db.close()

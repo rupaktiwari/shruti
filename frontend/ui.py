@@ -1,63 +1,197 @@
+import os
 import uuid
 
 import requests
 import streamlit as st
 
-# API_URL = "http://127.0.0.1:8000"
-API_URL = "https://wandererupak-shruti.hf.space"
+API_URL = os.getenv("SHRUTI_API_URL", "http://127.0.0.1:8000")
 
-st.set_page_config(page_title="Shruti", page_icon="🎙️", layout="wide")
+ROUTE_LABELS = {
+    "rag": "Resort notes",
+    "booking": "Reservation",
+    "general": "General",
+    "escalate": "Front desk",
+}
 
-# ------------------------------------------------------------------
-# PREMIUM THEME
-# ------------------------------------------------------------------
+SUGGESTIONS = [
+    ("Check-in and breakfast", "What time is check-in, and when is breakfast?"),
+    ("Deluxe room rate", "How much is a deluxe room, and what does it include?"),
+    ("From the airport", "How do I get to Himalaya House from Pokhara airport?"),
+    ("Hold a deluxe room", "Book a deluxe room for Sita Sharma, sita@example.com, check-in 2026-12-12, check-out 2026-12-15, 2 guests."),
+]
+
+st.set_page_config(
+    page_title="Shruti · Himalaya House",
+    page_icon="🌿",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
 st.markdown(
     """
     <style>
-    .main .block-container {
-        max-width: 760px;
-        padding-top: 2rem;
-        padding-bottom: 7rem;
-        margin: 0 auto;
-    }
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,460;9..144,600&family=Outfit:wght@380;500;600&display=swap');
 
+    html, body, [data-testid="stAppViewContainer"], .stApp {
+        background: #f4efe6;
+        color: #1c1915;
+        font-family: "Outfit", sans-serif;
+    }
+    .main .block-container {
+        max-width: 860px;
+        padding-top: 1.4rem;
+        padding-bottom: 7rem;
+    }
+    h1, h2, h3, .hero-title {
+        font-family: "Fraunces", serif !important;
+        letter-spacing: -0.03em;
+    }
     section[data-testid="stSidebar"] {
-        background-color: #171717;
-        border-right: 1px solid #2a2a2a;
+        background: #1f3d32;
+        border-right: 0;
     }
     section[data-testid="stSidebar"] * {
-        color: #e8e8e6 !important;
+        color: #f4efe6 !important;
+        font-family: "Outfit", sans-serif;
+    }
+    section[data-testid="stSidebar"] [data-testid="stIconMaterial"] {
+        font-family: "Material Symbols Rounded" !important;
+    }
+    section[data-testid="stSidebar"] hr {
+        border-color: rgba(244, 239, 230, 0.18);
     }
     section[data-testid="stSidebar"] button {
-        background-color: transparent !important;
-        border: 1px solid #3a3a3a !important;
+        background: transparent !important;
+        border: 1px solid rgba(244, 239, 230, 0.22) !important;
+        color: #f4efe6 !important;
         text-align: left !important;
         justify-content: flex-start !important;
+        border-radius: 12px !important;
     }
     section[data-testid="stSidebar"] button:hover {
-        background-color: #2a2a2a !important;
+        background: rgba(244, 239, 230, 0.08) !important;
+        border-color: rgba(244, 239, 230, 0.45) !important;
     }
-
+    section[data-testid="stSidebar"] button[kind="primary"] {
+        background: #f4efe6 !important;
+        color: #1f3d32 !important;
+        border: 0 !important;
+        font-weight: 600 !important;
+    }
+    section[data-testid="stSidebar"] button[kind="primary"] * {
+        color: #1f3d32 !important;
+    }
     div[data-testid="stChatMessage"] {
-        padding: 0.6rem 0.9rem;
-        border-radius: 16px;
+        background: transparent;
+        border-radius: 18px;
+        padding: 0.35rem 0.2rem;
+    }
+    div[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]),
+    div[data-testid="stChatMessage"]:has(span[data-testid="chatAvatarIcon-assistant"]) {
+        background: rgba(31, 61, 50, 0.06);
+        padding: 0.7rem 0.85rem;
+    }
+    div[data-testid="stChatInput"] textarea {
+        border-radius: 18px !important;
+        border: 1px solid #d9d0c2 !important;
+        background: #fffdf8 !important;
+        font-family: "Outfit", sans-serif !important;
+    }
+    .main .stButton button {
+        background: #fffdf8 !important;
+        color: #1c1915 !important;
+        border: 1px solid #ddd4c6 !important;
+        border-radius: 16px !important;
+        min-height: 4.4rem;
+        height: auto !important;
+        white-space: normal !important;
+        text-align: left !important;
+        justify-content: flex-start !important;
+        padding: 0.85rem 1rem !important;
+        font-family: "Outfit", sans-serif !important;
+        line-height: 1.35 !important;
+    }
+    .main .stButton button:hover {
+        border-color: #1f3d32 !important;
+        background: #fff !important;
+    }
+    section.stMain [data-testid="stMainBlockContainer"] {
+        padding-bottom: 6.5rem;
+    }
+    section.stMain [data-testid="stHorizontalBlock"]:has([data-testid="stChatInput"]) {
+        position: fixed;
+        bottom: 1rem;
+        left: 50%;
+        transform: translateX(calc(-50% + 150px));
+        width: min(860px, calc(100vw - 22rem));
+        z-index: 30;
+        margin: 0;
+        align-items: center;
+        background: #f4efe6;
+        padding: 0.35rem 0;
+    }
+    section.stMain [data-testid="stPopover"] button {
+        background: #1f3d32 !important;
+        color: #f4efe6 !important;
+        border: 0 !important;
+        border-radius: 16px !important;
+        min-height: 3.15rem !important;
+        height: 3.15rem !important;
+        justify-content: center !important;
+        text-align: center !important;
+        font-family: "Outfit", sans-serif !important;
+        font-weight: 500 !important;
+    }
+    section.stMain [data-testid="stPopover"] button * {
+        color: #f4efe6 !important;
+    }
+    .offline-note {
+        margin-top: 1rem;
+        padding: 0.75rem 0.9rem;
+        border-radius: 12px;
+        background: #f6e7d8;
+        color: #6a3b16;
+        font-size: 0.95rem;
+    }
+    .hero-kicker {
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        font-size: 0.74rem;
+        color: #6d6458;
         margin-bottom: 0.4rem;
     }
-
-    div[data-testid="stChatInput"] textarea {
-        border-radius: 999px !important;
+    .hero-title {
+        font-size: 3.4rem;
+        line-height: 0.95;
+        margin: 0;
+        color: #1f3d32;
     }
+    .hero-copy {
+        font-size: 1.08rem;
+        color: #4d463d;
+        max-width: 38rem;
+        margin-top: 0.8rem;
+    }
+    .pill {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 0.12rem 0.55rem;
+        font-size: 0.75rem;
+        letter-spacing: 0.04em;
+        background: #e7efe9;
+        color: #1f3d32;
+        border: 1px solid #c9d9cf;
+    }
+    .status-ok { color: #d7ecdf !important; }
+    .status-off { color: #f0d7c4 !important; }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# ------------------------------------------------------------------
-# STATE
-# ------------------------------------------------------------------
 defaults = {
     "messages": [],
-    "thread_id": f"v1-{uuid.uuid4().hex}",
+    "thread_id": f"stay-{uuid.uuid4().hex[:10]}",
     "pending_transcript": None,
     "pending_audio": None,
     "widget_key": 0,
@@ -67,14 +201,21 @@ for key, value in defaults.items():
     st.session_state.setdefault(key, value)
 
 
-# ------------------------------------------------------------------
-# API HELPERS
-# ------------------------------------------------------------------
-def transcribe_only(audio_bytes, file_type):
-    files = {"file": (f"audio.{file_type}", audio_bytes, f"audio/{file_type}")}
+def api_health():
+    try:
+        response = requests.get(f"{API_URL}/", timeout=3)
+        if response.status_code == 200:
+            return response.json()
+    except requests.exceptions.RequestException:
+        return None
+    return None
+
+
+def transcribe_only(audio_bytes):
+    files = {"file": ("voice.wav", audio_bytes, "audio/wav")}
     response = requests.post(f"{API_URL}/transcribe", files=files, timeout=300)
     if response.status_code != 200:
-        st.error(f"Transcription failed: {response.text}")
+        st.error("Transcription failed. The quantized speech model may still be loading.")
         return None
     return response.json().get("transcription", "").strip()
 
@@ -86,7 +227,7 @@ def send_to_shruti(transcript):
         timeout=300,
     )
     if response.status_code != 200:
-        st.error(f"Conversation failed: {response.text}")
+        st.error("Shruti could not answer just now. Check that the API and Groq key are running.")
         return None, None
     result = response.json()
     return result.get("answer", ""), result.get("route", "")
@@ -94,7 +235,16 @@ def send_to_shruti(transcript):
 
 def fetch_threads():
     try:
-        return requests.get(f"{API_URL}/conversations", timeout=10).json()
+        payload = requests.get(f"{API_URL}/conversations", timeout=10).json()
+        return payload if isinstance(payload, list) else []
+    except requests.exceptions.RequestException:
+        return []
+
+
+def fetch_reservations():
+    try:
+        payload = requests.get(f"{API_URL}/reservations", timeout=10).json()
+        return payload if isinstance(payload, list) else []
     except requests.exceptions.RequestException:
         return []
 
@@ -110,7 +260,7 @@ def delete_thread(thread_id):
 
 def start_new_conversation():
     st.session_state.messages = []
-    st.session_state.thread_id = f"v1-{uuid.uuid4().hex}"
+    st.session_state.thread_id = f"stay-{uuid.uuid4().hex[:10]}"
     st.session_state.pending_transcript = None
     st.session_state.pending_audio = None
     st.session_state.widget_key += 1
@@ -120,16 +270,19 @@ def load_thread(thread_id):
     st.session_state.thread_id = thread_id
     history = requests.get(f"{API_URL}/conversations/{thread_id}", timeout=10).json()
     st.session_state.messages = [
-        {"role": m["role"], "content": m["content"], "route": m.get("route"), "audio": None}
-        for m in history
+        {"role": item["role"], "content": item["content"], "route": item.get("route"), "audio": None}
+        for item in history
     ]
     st.session_state.pending_transcript = None
     st.session_state.pending_audio = None
 
 
 def send_message(content, audio=None):
+    content = content.strip()
+    if not content:
+        return
     st.session_state.messages.append({"role": "user", "content": content, "audio": audio})
-    with st.spinner("Shruti is thinking..."):
+    with st.spinner("Shruti is checking the desk..."):
         answer, route = send_to_shruti(content)
     if answer is not None:
         st.session_state.messages.append({"role": "assistant", "content": answer, "route": route})
@@ -139,118 +292,149 @@ def send_message(content, audio=None):
     st.rerun()
 
 
-# ------------------------------------------------------------------
-# SIDEBAR
-# ------------------------------------------------------------------
-with st.sidebar:
-    st.markdown("## 🎙️ Shruti")
-    st.caption("Nepali speech & conversational agent")
+health = api_health()
 
-    if st.button("➕  New chat", type="primary", use_container_width=True):
+with st.sidebar:
+    st.markdown("### Shruti")
+    st.caption("Concierge, Himalaya House")
+    if health is None:
+        st.markdown("<p class='status-off'>Desk offline</p>", unsafe_allow_html=True)
+    else:
+        voice = "Nepali voice ready" if health.get("asr_loaded") else "Voice model not loaded"
+        st.markdown(f"<p class='status-ok'>Desk open · {voice}</p>", unsafe_allow_html=True)
+
+    if st.button("New conversation", type="primary", use_container_width=True):
         start_new_conversation()
         st.rerun()
 
     st.markdown("---")
     st.caption("CONVERSATIONS")
-
     threads = fetch_threads()
     if not threads:
-        st.caption("_No conversations yet_")
+        st.caption("Nothing saved yet.")
 
     for thread in threads:
-        tid = thread["thread_id"]
-        is_active = tid == st.session_state.thread_id
-        label = thread["title"] or "New conversation"
-
-        if st.session_state.confirm_delete == tid:
-            st.caption(f"Delete “{label}”? This can't be undone.")
-            confirm_col, cancel_col = st.columns(2)
-            with confirm_col:
-                if st.button("Delete", key=f"confirm_{tid}", use_container_width=True):
-                    if delete_thread(tid) and is_active:
+        thread_id = thread["thread_id"]
+        active = thread_id == st.session_state.thread_id
+        label = (thread.get("title") or "New conversation").strip()
+        if st.session_state.confirm_delete == thread_id:
+            st.caption(f"Delete “{label}”?")
+            yes_col, no_col = st.columns(2)
+            with yes_col:
+                if st.button("Delete", key=f"confirm_{thread_id}", use_container_width=True):
+                    if delete_thread(thread_id) and active:
                         start_new_conversation()
                     st.session_state.confirm_delete = None
                     st.rerun()
-            with cancel_col:
-                if st.button("Cancel", key=f"cancel_{tid}", use_container_width=True):
+            with no_col:
+                if st.button("Keep", key=f"cancel_{thread_id}", use_container_width=True):
                     st.session_state.confirm_delete = None
                     st.rerun()
         else:
             row_col, del_col = st.columns([5, 1])
             with row_col:
-                btn_label = ("👉 " if is_active else "💬 ") + label
-                if st.button(btn_label, key=f"thread_{tid}", use_container_width=True):
-                    load_thread(tid)
+                prefix = "● " if active else ""
+                if st.button(prefix + label, key=f"thread_{thread_id}", use_container_width=True):
+                    load_thread(thread_id)
                     st.rerun()
             with del_col:
-                if st.button("🗑️", key=f"del_{tid}"):
-                    st.session_state.confirm_delete = tid
+                if st.button("×", key=f"del_{thread_id}"):
+                    st.session_state.confirm_delete = thread_id
                     st.rerun()
 
     st.markdown("---")
-    st.caption(
-        "🧪 Shruti V2 is an experimental streaming-ASR build — "
-        "see it on the **Shruti V2** page in the sidebar above. "
-        "Erratic behaviour expected; not part of this build."
-    )
+    st.caption("HOLDS AT THE DESK")
+    reservations = fetch_reservations()
+    if not reservations:
+        st.caption("No rooms held yet.")
+    for stay in reservations[:6]:
+        st.markdown(
+            f"**{stay['name']}**  \n{stay['room_type']} · {stay['check_in']} → {stay['check_out']}"
+        )
+
+    st.markdown("---")
+    st.caption("Lakeside, Pokhara. Speak Nepali or type in either language. Replies stay as text.")
 
 
-# ------------------------------------------------------------------
-# CHAT HISTORY
-# ------------------------------------------------------------------
 if not st.session_state.messages and not st.session_state.pending_transcript:
     st.markdown(
-        "<div style='text-align:center; margin-top:15vh; opacity:0.6;'>"
-        "<h2>🎙️ Shruti</h2>"
-        "<p>Ask anything — type below, or record a voice message.</p>"
-        "</div>",
+        """
+        <div class="hero-kicker">Himalaya House · Pokhara</div>
+        <div class="hero-title">Good day.<br>I’m Shruti.</div>
+        <p class="hero-copy">
+        Ask about the rooms, the lake, or a table. Or hold a room.
+        Speak Nepali if you prefer — I’ll transcribe it before I answer.
+        </p>
+        """,
         unsafe_allow_html=True,
     )
+    st.write("")
+    if health is None:
+        st.markdown(
+            "<div class='offline-note'>The desk API is not running, so these prompts cannot be answered yet.</div>",
+            unsafe_allow_html=True,
+        )
+    left, right = st.columns(2)
+    for index, (label, prompt_text) in enumerate(SUGGESTIONS):
+        column = left if index % 2 == 0 else right
+        with column:
+            if st.button(label, key=f"suggest_{index}", use_container_width=True):
+                send_message(prompt_text)
 
 for message in st.session_state.messages:
-    avatar = "🧑" if message["role"] == "user" else "🎙️"
+    avatar = "🌿" if message["role"] == "assistant" else "👤"
     with st.chat_message(message["role"], avatar=avatar):
         st.write(message["content"])
         if message["role"] == "user" and message.get("audio"):
             st.audio(message["audio"])
-        if message["role"] == "assistant" and message.get("route"):
-            st.caption(f"Route: `{message['route']}`")
+        route = message.get("route")
+        if message["role"] == "assistant" and route:
+            st.markdown(
+                f"<span class='pill'>{ROUTE_LABELS.get(route, route)}</span>",
+                unsafe_allow_html=True,
+            )
 
 if st.session_state.pending_transcript:
-    with st.chat_message("user", avatar="🧑"):
-        st.write(st.session_state.pending_transcript)
-        st.caption("🎤 Transcribed from voice — review before sending")
-
+    st.markdown("##### Check the transcript")
+    st.caption("This came from the Nepali speech model. Edit it if a word is off, then send.")
+    draft = st.text_area(
+        "Transcript",
+        value=st.session_state.pending_transcript,
+        label_visibility="collapsed",
+        key=f"draft_{st.session_state.widget_key}",
+    )
+    if st.session_state.pending_audio:
+        st.audio(st.session_state.pending_audio)
     send_col, discard_col = st.columns(2)
     with send_col:
-        if st.button("➤ Send", type="primary", use_container_width=True, key="send_voice"):
-            send_message(st.session_state.pending_transcript, st.session_state.pending_audio)
+        if st.button("Send to Shruti", type="primary", use_container_width=True):
+            send_message(draft, st.session_state.pending_audio)
     with discard_col:
-        if st.button("Discard", use_container_width=True, key="discard_voice"):
+        if st.button("Discard", use_container_width=True):
             st.session_state.pending_transcript = None
             st.session_state.pending_audio = None
             st.session_state.widget_key += 1
             st.rerun()
 
-
-# ------------------------------------------------------------------
-# INPUT AREA — text is primary, voice is an optional extra
-# ------------------------------------------------------------------
-with st.popover("🎤 Voice message"):
-    st.caption("Record instead of typing — works best in Nepali")
-    recorded_audio = st.audio_input(
-        "Record", key=f"mic_{st.session_state.widget_key}", label_visibility="collapsed"
-    )
-    if recorded_audio and st.session_state.pending_transcript is None:
-        with st.spinner("Transcribing..."):
-            transcript = transcribe_only(recorded_audio.getvalue(), "wav")
-        if transcript:
-            st.session_state.pending_transcript = transcript
-            st.session_state.pending_audio = recorded_audio.getvalue()
-            st.rerun()
-        elif transcript == "":
-            st.warning("🔇 No speech detected. Try again.")
-
-text_prompt = st.chat_input("Message Shruti...")
-if text_prompt:
-    send_message(text_prompt)
+voice_col, type_col = st.columns([1.15, 5], vertical_alignment="bottom")
+with voice_col:
+    with st.popover("Speak Nepali", use_container_width=True):
+        st.caption("Record a short message. You can correct the transcript before it is sent.")
+        recorded = st.audio_input(
+            "Record",
+            key=f"mic_{st.session_state.widget_key}",
+            label_visibility="collapsed",
+        )
+        if recorded is not None and st.session_state.pending_transcript is None:
+            with st.spinner("Transcribing..."):
+                transcript = transcribe_only(recorded.getvalue())
+            if transcript:
+                st.session_state.pending_transcript = transcript
+                st.session_state.pending_audio = recorded.getvalue()
+                st.rerun()
+            elif transcript == "":
+                st.warning("No speech in that clip. Try again a little closer to the mic.")
+with type_col:
+    prompt = st.chat_input("Ask Shruti about the house...")
+    if prompt:
+        send_message(prompt)

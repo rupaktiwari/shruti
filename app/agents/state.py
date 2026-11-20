@@ -1,9 +1,9 @@
-# app/agents/state.py
-from typing import TypedDict, Literal, Optional
+from typing import Literal, Optional, TypedDict
+
 
 class ShrutiState(TypedDict):
     transcript: str
-    thread_id: str
-    route: Optional[Literal["rag", "general", "escalate"]]
-    confidence: Optional[float]
+    session_id: str
+    history: list[dict]
+    route: Optional[Literal["rag", "booking", "general", "escalate"]]
     answer: Optional[str]
