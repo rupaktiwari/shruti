@@ -296,7 +296,7 @@ health = api_health()
 
 with st.sidebar:
     st.markdown("### Shruti")
-    st.caption("Voice concierge")
+    st.caption("AI concierge")
     if health is None:
         st.markdown("<p class='status-off'>Desk offline</p>", unsafe_allow_html=True)
     else:
@@ -359,7 +359,7 @@ with st.sidebar:
 if not st.session_state.messages and not st.session_state.pending_transcript:
     st.markdown(
         """
-        <div class="hero-kicker">Voice concierge</div>
+        <div class="hero-kicker">AI concierge</div>
         <div class="hero-title">Good day.<br>I’m Shruti.</div>
         <p class="hero-copy">
         Ask about the stay, or hold a room.

@@ -1,7 +1,7 @@
 [project]
 name = "shruti"
 version = "0.1.0"
-description = "Nepali voice concierge with retrieval, Redis memory, and Postgres bookings"
+description = "AI concierge with Nepali speech input, retrieval, Redis memory, and Postgres bookings"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
