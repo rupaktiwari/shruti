@@ -1,6 +1,6 @@
 # Shruti
 
-Shruti is a voice concierge. A guest types in English or Nepali, or speaks Nepali. The reply is text. The property it knows is whatever you put in `knowledge_base/`. The notes in this repo are a sample, so the demo has rooms, rates, and a booking flow to show.
+Shruti is a hotel concierge. A guest types in English or Nepali, or speaks Nepali. The reply is text. The property it knows is whatever you put in `knowledge_base/`. The notes in this repo are a sample, so the demo has rooms, rates, and a booking flow to show.
 
 The screen is Streamlit. The API is FastAPI. Nepali audio is transcribed by a self-trained Wav2Vec2-BERT model that has been quantized to int8. There is no text-to-speech.
 
@@ -149,6 +149,3 @@ uv run python -m unittest tests/test_booking_rules.py
 
 `Dockerfile` builds the API and downloads the quantized speech model during the image build. Postgres, Redis, and Qdrant stay in `docker-compose.yml`.
 
-## Later
-
-WhatsApp or Messenger can call the same `/converse` session. Text-to-speech, tool-calling over MCP, and traced evaluation in LangSmith are not part of this build.
