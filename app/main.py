@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Shruti — Himalaya House concierge",
+    title="Shruti",
     version="2.0.0",
     lifespan=lifespan,
 )
@@ -48,6 +48,6 @@ app.include_router(ingestion_router)
 @app.get("/")
 def health_check():
     return {
-        "message": "Namaste. Shruti is ready at Himalaya House.",
+        "message": "Namaste. Shruti is ready.",
         "asr_loaded": shruti_engine.model is not None,
     }

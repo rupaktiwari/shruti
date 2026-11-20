@@ -16,12 +16,12 @@ ROUTE_LABELS = {
 SUGGESTIONS = [
     ("Check-in and breakfast", "What time is check-in, and when is breakfast?"),
     ("Deluxe room rate", "How much is a deluxe room, and what does it include?"),
-    ("From the airport", "How do I get to Himalaya House from Pokhara airport?"),
+    ("From the airport", "How do I get to the property from the airport?"),
     ("Hold a deluxe room", "Book a deluxe room for Sita Sharma, sita@example.com, check-in 2026-12-12, check-out 2026-12-15, 2 guests."),
 ]
 
 st.set_page_config(
-    page_title="Shruti · Himalaya House",
+    page_title="Shruti",
     page_icon="🌿",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -296,7 +296,7 @@ health = api_health()
 
 with st.sidebar:
     st.markdown("### Shruti")
-    st.caption("Concierge, Himalaya House")
+    st.caption("Voice concierge")
     if health is None:
         st.markdown("<p class='status-off'>Desk offline</p>", unsafe_allow_html=True)
     else:
@@ -353,16 +353,16 @@ with st.sidebar:
         )
 
     st.markdown("---")
-    st.caption("Lakeside, Pokhara. Speak Nepali or type in either language. Replies stay as text.")
+    st.caption("Speak Nepali, or type in either language. Replies stay as text.")
 
 
 if not st.session_state.messages and not st.session_state.pending_transcript:
     st.markdown(
         """
-        <div class="hero-kicker">Himalaya House · Pokhara</div>
+        <div class="hero-kicker">Voice concierge</div>
         <div class="hero-title">Good day.<br>I’m Shruti.</div>
         <p class="hero-copy">
-        Ask about the rooms, the lake, or a table. Or hold a room.
+        Ask about the stay, or hold a room.
         Speak Nepali if you prefer — I’ll transcribe it before I answer.
         </p>
         """,
@@ -435,6 +435,6 @@ with voice_col:
             elif transcript == "":
                 st.warning("No speech in that clip. Try again a little closer to the mic.")
 with type_col:
-    prompt = st.chat_input("Ask Shruti about the house...")
+    prompt = st.chat_input("Message Shruti...")
     if prompt:
         send_message(prompt)
