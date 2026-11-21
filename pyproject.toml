@@ -1,7 +1,7 @@
 [project]
 name = "shruti"
 version = "0.1.0"
-description = "AI concierge with Nepali speech input, retrieval, Redis memory, and Postgres bookings"
+description = "Nepali speech chat and a document notebook. Shruti talks. Smriti answers from your files."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -31,8 +31,6 @@ dependencies = [
     "sentence-transformers>=6.0.1",
     "silero-vad>=6.2.1",
     "soundfile>=0.13.1",
-    "streamlit>=1.53.0",
-    "streamlit-webrtc>=0.77.0",
     "torch>=2.9.1",
     "torchaudio>=2.11.0",
     "transformers>=4.57.6",

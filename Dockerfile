@@ -18,8 +18,7 @@ RUN uv pip install \
     --index-strategy unsafe-best-match
 
 COPY app/ app/
-COPY knowledge_base/ knowledge_base/
-COPY scripts/ingest_knowledge_base.py scripts/ingest_knowledge_base.py
+COPY frontend/ frontend/
 
 # Bake model weights into the image at build time — no runtime network dependency.
 RUN python -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='wandererupak/shruti-quantized', local_dir='/app/quantized_shruti_model')"

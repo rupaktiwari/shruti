@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shruti</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,460;9..144,600&family=Outfit:wght@380;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <p class="brand-name">Shruti</p>
+        <p class="brand-note">Chat, and a notebook named Smriti</p>
+      </div>
+
+      <div class="mode-switch" role="tablist" aria-label="Mode">
+        <button type="button" id="mode-shruti" class="mode is-active" role="tab" aria-selected="true">Shruti</button>
+        <button type="button" id="mode-smriti" class="mode" role="tab" aria-selected="false">Smriti</button>
+      </div>
+
+      <p id="status" class="status">Checking the API…</p>
+
+      <div id="shruti-nav" class="nav-panel">
+        <button type="button" id="new-chat" class="solid">New chat</button>
+        <p class="nav-label">Chats</p>
+        <div id="chat-list" class="nav-list"></div>
+      </div>
+
+      <div id="smriti-nav" class="nav-panel" hidden>
+        <form id="create-notebook" class="stack">
+          <input id="notebook-title" type="text" maxlength="120" placeholder="Notebook title" autocomplete="off">
+          <button type="submit" class="solid">Create notebook</button>
+        </form>
+        <p class="nav-label">Notebooks</p>
+        <div id="notebook-list" class="nav-list"></div>
+        <div id="notebook-chats" hidden>
+          <p class="nav-label">Chats in this notebook</p>
+          <button type="button" id="new-notebook-chat" class="ghost">New notebook chat</button>
+          <div id="notebook-chat-list" class="nav-list"></div>
+        </div>
+      </div>
+
+      <p class="aside-foot">Speak Nepali, or type in either language. Replies stay as text.</p>
+    </aside>
+
+    <main>
+      <div class="stage">
+      <section id="shruti-view" class="view">
+        <header id="shruti-hero" class="hero">
+          <p class="kicker">Chat</p>
+          <h1>Shruti</h1>
+          <p class="lede">A general assistant. Type in English or Nepali, or speak Nepali. The transcript is shown before it is sent. Uploaded files are answered in Smriti.</p>
+          <div id="suggestions" class="suggestions"></div>
+        </header>
+        <div id="shruti-log" class="log" aria-live="polite"></div>
+      </section>
+
+      <section id="smriti-view" class="view" hidden>
+        <header id="smriti-empty" class="hero">
+          <p class="kicker">Notebook</p>
+          <h1>Smriti</h1>
+          <p class="lede">Create a notebook, add a PDF or a text file, then ask about that file. Answers stay inside the notebook and name the source.</p>
+        </header>
+        <div id="smriti-workspace" class="workspace" hidden>
+          <div class="sources">
+            <p class="kicker">Notebook</p>
+            <h1 id="notebook-heading"></h1>
+            <p class="lede tight">Answers use only the files in this notebook.</p>
+            <form id="upload-form" class="stack">
+              <label class="file">
+                <input id="file-input" type="file" accept=".pdf,.txt,application/pdf,text/plain">
+                <span>Choose a PDF or text file</span>
+              </label>
+              <button type="submit" class="solid">Add to notebook</button>
+            </form>
+            <div id="source-list" class="source-list"></div>
+            <form id="rename-form" class="stack rename">
+              <input id="rename-input" type="text" maxlength="120" aria-label="Notebook title">
+              <div class="row">
+                <button type="submit" class="ghost">Rename</button>
+                <button type="button" id="delete-notebook" class="danger">Delete notebook</button>
+              </div>
+            </form>
+          </div>
+          <div id="smriti-log" class="log" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="review" class="review" hidden>
+        <p class="kicker">Check the transcript</p>
+        <p class="hint">This came from the Nepali speech model. Edit it if a word is off, then send.</p>
+        <textarea id="review-text" rows="3"></textarea>
+        <audio id="review-audio" controls></audio>
+        <div class="row">
+          <button type="button" id="review-send" class="solid">Send</button>
+          <button type="button" id="review-discard" class="ghost">Discard</button>
+        </div>
+      </section>
+
+      <p id="notice" class="notice" hidden></p>
+      </div>
+
+      <form id="composer" class="composer">
+        <button type="button" id="mic" class="mic" aria-label="Speak Nepali" title="Speak Nepali">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3z"/>
+            <path d="M19 11a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.92V21H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-3.08A7 7 0 0 0 19 11z"/>
+          </svg>
+        </button>
+        <textarea id="message" rows="1" placeholder="Message Shruti…" maxlength="8000"></textarea>
+        <button type="submit" id="send" class="send">Send</button>
+      </form>
+    </main>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

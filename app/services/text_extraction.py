@@ -8,5 +8,5 @@ def extract_text(filename: str, content: bytes) -> str:
         reader = PdfReader(BytesIO(content))
         return "\n".join(page.extract_text() or "" for page in reader.pages)
     if filename.lower().endswith(".txt"):
-        return content.decode("utf-8")
+        return content.decode("utf-8-sig")
     raise ValueError(f"Unsupported file type: {filename}")

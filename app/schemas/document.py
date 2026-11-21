@@ -10,6 +10,7 @@ class ChunkingStrategy(str, Enum):
 
 class UploadResponse(BaseModel):
     document_id: int
+    notebook_id: int
     filename: str
     chunk_count: int
     chunking_strategy: ChunkingStrategy
